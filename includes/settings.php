@@ -12,18 +12,75 @@
 // No direct access
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Settings needed
-// Sermon series image
-
 /**
- * Create a default image setting
- *
- * Custom setting for a default upload image
+ * Setup CCX settings page within the CT settings
  *
  * @since 0.1
- * @access public
+ * @return array CCX-specific settings
  */
-	function ccx_default_image( $post_type ){
+function ccx_settings_setup(){
+	
+	$ccx_settings = array(
+		'title' => __( 'CCX', 'jsccx' ),
+		'desc' => __( "Church Content Extender (CCX) provides additional options to the <b>Church Content</b> plugin", 'jsccx' ),
+		'fields' => array(
+			'enable_sermon' => ccx_settings_enable_cpt( 'sermon' ),
+			'enable_event' => ccx_settings_enable_cpt( 'event' ),
+			'enable_location' => ccx_settings_enable_cpt( 'location' ),
+			'enable_person' => ccx_settings_enable_cpt( 'person' ),
+			'hr1' => ccx_settings_content( '<hr>' ),
+			'default_sermon_image' => ccx_settings_default_image( 'sermon' ),
+			'default_event_image' => ccx_settings_default_image( 'event' ),
+			'default_location_image' => ccx_settings_default_image( 'location' ),
+			'default_person_image' => ccx_settings_default_image( 'person' ),
+		)
+	);
+	
+	return $ccx_settings;
+}
+
+/**
+ * Filter the original CC settings
+ *
+ * @since 0.1
+ * @param array $config Settings array
+ * @return array Filtered settings array
+ */
+function ctc_settings_filter( $config ){
+	
+	if( 'CCX' == CCP_VERSION ) {
+		// Eliminate some of CC's settings if we want to replace with custom versions
+		unset( $config['sections']['licenses'] );
+		unset( $config['sections']['podcast'] );
+				
+		// Clear pro flags
+		foreach( $config['sections'] as $section_id => $section ){
+			if( isset( $section['fields'] ) ){
+				foreach ( $section['fields'] as $field_id => $field ) {
+					if( ! empty( $field['pro'] ) ) {
+						$config['sections'][ $section_id ]['fields'][ $field_id ]['pro'] = false; 
+					}
+				}
+			}
+		}
+	}
+	
+	$config['sections']['ccx'] = ccx_settings_setup();
+	return $config;
+}
+add_filter( 'ctc_settings_config', 'ctc_settings_filter', 2 );
+
+/**********************************
+ * SETTINGS SHORTCUTS
+ **********************************/
+ 
+/**
+ * Shortcut to setting to add a default image for CC post types
+ *
+ * @since 0.1
+ * @return array Setting definition  
+ */
+function ccx_settings_default_image( $post_type ){
 	$avail_types = array( 'sermon', 'event', 'location', 'person' );
 	
 	if( ! in_array( $post_type, $avail_types ) ) return;
@@ -56,20 +113,27 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 }
 
 /**
- * Force enable the 
+ * Shortcut for setting to enable of the CC custom post types and associated options 
  *
  * @since 0.1
- * @access public
+ * @global $ccx_forced_cc
+ * @return array Setting definition
  */
-function ccx_enable_cpt_in_theme( $post_type ){
+function ccx_settings_enable_cpt( $post_type ){
+	global $ccx_forced_cc;
+	
 	$avail_types = array( 'sermon', 'event', 'location', 'person' );
 	$supports = array( 'sermon' => 'ctc-sermons', 'event' => 'ctc-events', 'location' => 'ctc-locations', 'person' => 'people' );
 	
 	if( ! in_array( $post_type, $avail_types ) ) return;
 	
-	// If CC support is enabled by theme, this setting is readonly (i.e., it's hardcoded, so we won't disable support)
-	$cc_enabled_by_theme = (bool) get_theme_support( 'church-theme-content' );
-	$is_enabled_by_theme = (bool) get_theme_support( 'church-theme-content' ) && (bool) get_theme_support( $supports[ $post_type ] );
+	// Check if CC support is theme-defined
+	$is_enabled_by_theme = false;
+	if( ! empty( $ccx_forced_cc ) ){
+		$featured_enabled = (bool) get_theme_support( $supports[ $post_type ] );
+		$is_enabled_by_theme = $featured_enabled && ! in_array( $post_type, $ccx_forced_cc );
+	}
+	
 	$attr = array();
 	if( $is_enabled_by_theme ){
 		$attr = array( 'readonly' => 'readonly' );
@@ -92,7 +156,7 @@ function ccx_enable_cpt_in_theme( $post_type ){
 		'no_empty'          => false, 
 		'allow_html'        => false, 
 		'attributes'        => $attr, 
-		'class'             => $is_enabled_by_theme ? 'ctc-setting-readonly':'', 
+		'class'             => $is_enabled_by_theme ? 'ctc-setting-readonly' : '', 
 		'content'           => '',
 		'custom_sanitize'   => '', 
 		'custom_content'    => '', 
@@ -103,55 +167,37 @@ function ccx_enable_cpt_in_theme( $post_type ){
 	return $cpt_setting;
 }
 
-
 /**
- * Setup CCX settings page within the CT settings
+ * Shortcut to create a content block
  *
  * @since 0.1
- * @access public
+ * @param $content string Display content
+ * @return array Setting definition
  */
-function ccx_settings_setup(){
-	
-	$ccx_settings = array(
-		'title' => __( 'CCX', 'jsccx' ),
-		'desc' => __( "Church Content Extender provides additional options to the <b>Church Content</b> plugin", 'jsccx' ),
-		'fields' => array(
-			//'enable_sermon' => ccx_enable_cpt_in_theme( 'sermon' ),
-			//'enable_event' => ccx_enable_cpt_in_theme( 'event' ),
-			//'enable_location' => ccx_enable_cpt_in_theme( 'location' ),
-			//'enable_person' => ccx_enable_cpt_in_theme( 'person' ),
-			'default_sermon_image' => ccx_default_image( 'sermon' ),
-			'default_event_image' => ccx_default_image( 'event' ),
-			'default_location_image' => ccx_default_image( 'location' ),
-			'default_person_image' => ccx_default_image( 'person' ),
-		)
+function ccx_settings_content( $content ){
+	$display = array(
+		'name' 							=> '',
+		'after_name'  			=> '',
+		'desc'       			 	=> '',
+		'type'        			=> 'content', 
+		'checkbox_label'    => '', 
+		'inline'            => false, 
+		'options'           => array(),
+		'upload_button'     => '', 
+		'upload_title'      => '', 
+		'upload_type'       => '', 
+		'upload_show_image' => false, 
+		'default'           => '', 
+		'no_empty'          => false, 
+		'allow_html'        => false, 
+		'attributes'        => '', 
+		'class'             => '', 
+		'content'           => $content,
+		'custom_sanitize'   => '', 
+		'custom_content'    => '', 
+		'pro'               => false, 
+		'unsupported'       => false, 
 	);
-	
-	return $ccx_settings;
+	return $display;
 }
-
-function ctc_settings_filter( $config ){
-	
-	if( 'CCX' == CCP_VERSION ) {
-		// Eliminate some of CT's settings if we want to replace with custom versions
-		unset( $config['sections']['licenses'] );
-		unset( $config['sections']['podcast'] );
-				
-		// Clear pro flags and fake theme support (TODO)
-		foreach( $config['sections'] as $section_id => $section ){
-			if( isset( $section['fields'] ) ){
-				foreach ( $section['fields'] as $field_id => $field ) {
-					$config['sections'][ $section_id ]['fields'][ $field_id ]['unsupported'] = false; 
-					if( ! empty( $field['pro'] ) ) {
-						$config['sections'][ $section_id ]['fields'][ $field_id ]['pro'] = false; 
-					}
-				}
-			}
-		}
-	}
-	
-	$config['sections']['ccx'] = ccx_settings_setup();
-	return $config;
-}
-add_filter( 'ctc_settings_config', 'ctc_settings_filter', 2 );
 
