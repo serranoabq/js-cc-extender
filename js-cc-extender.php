@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Church Content Extender
  * Description: Plugin to augment the Church Content plugin by adding additional features. Requires <strong>Church Content</strong> plugin.
- * Version: 0.1
+ * Version: 0.2
  * Author: Justin Serrano
  * Text Domain: jsccx
  *
@@ -167,11 +167,11 @@ class CCExtender {
 
 				// Functions
 				CCX_INC_DIR . '/settings.php',
+				CCX_INC_DIR . '/post-types.php',
 				//CCX_INC_DIR . '/taxonomies.php',
 				//CCX_INC_DIR . '/cpt-names.php',
 				//CCX_INC_DIR . '/publics.php',
 				//CCX_INC_DIR . '/helpers.php',
-				//CCX_INC_DIR . '/post-types.php',
 				//CCX_INC_DIR . '/support.php',
 
 			),
