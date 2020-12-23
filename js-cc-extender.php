@@ -167,9 +167,9 @@ class CCExtender {
 
 				// Functions
 				CCX_INC_DIR . '/settings.php',
-				CCX_INC_DIR . '/post-types.php',
-				//CCX_INC_DIR . '/taxonomies.php',
-				//CCX_INC_DIR . '/cpt-names.php',
+				CCX_INC_DIR . '/post_types.php',
+				CCX_INC_DIR . '/post_images.php',
+				CCX_INC_DIR . '/taxonomies.php',
 				//CCX_INC_DIR . '/publics.php',
 				//CCX_INC_DIR . '/helpers.php',
 				//CCX_INC_DIR . '/support.php',
