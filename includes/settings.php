@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /**
  * Setup CCX settings page within the CT settings
  *
- * @since 0.1
+ * @since 0.3
  * @return array CCX-specific settings
  */
 function ccx_settings_setup(){
@@ -24,11 +24,22 @@ function ccx_settings_setup(){
 		'title' => __( 'CCX', 'jsccx' ),
 		'desc' => __( "Church Content Extender (CCX) provides additional options to the <b>Church Content</b> plugin", 'jsccx' ),
 		'fields' => array(
-			'enable_sermon' => ccx_settings_enable_cpt( 'sermon' ),
-			'enable_event' => ccx_settings_enable_cpt( 'event' ),
-			'enable_location' => ccx_settings_enable_cpt( 'location' ),
-			'enable_person' => ccx_settings_enable_cpt( 'person' ),
-			'hr1' => ccx_settings_content( '<hr>' ),
+			// Post types
+			'enable_sermon' => ccx_settings_enable_cpt( 'sermon' , __( 'Enable Church Content post types for theme' , 'jsccx' ) ),
+			'enable_event' => ccx_settings_enable_cpt( 'event', '' ),
+			'enable_location' => ccx_settings_enable_cpt( 'location', '' ),
+			'enable_person' => ccx_settings_enable_cpt( 'person', '' ),
+			
+			// Categories
+			'enable_sermon_speaker' => ccx_settings_enable_category( 'sermon_speaker', __( 'Enable categories for theme', 'jsccx') ),
+			'enable_sermon_topic' => ccx_settings_enable_category( 'sermon_topic', '' ),
+			'enable_sermon_series' => ccx_settings_enable_category( 'sermon_series', '' ),
+			'enable_sermon_tag' => ccx_settings_enable_category( 'sermon_tag', '' ),
+			'enable_sermon_book' => ccx_settings_enable_category( 'sermon_book', '' ),
+			'enable_event_category' => ccx_settings_enable_category( 'event_category', '' ),
+			'enable_event_category' => ccx_settings_enable_category( 'person_group', '' ),
+			
+			// Images
 			'default_sermon_image' => ccx_settings_default_image( 'sermon' ),
 			'default_event_image' => ccx_settings_default_image( 'event' ),
 			'default_location_image' => ccx_settings_default_image( 'location' ),
@@ -115,11 +126,13 @@ function ccx_settings_default_image( $post_type ){
 /**
  * Shortcut for setting to enable of the CC custom post types and associated options 
  *
- * @since 0.1
+ * @since 0.3
  * @global $ccx_forced_cc
+ * @param string $post_type Post type for setting
+ * @param string $name_field String for field name
  * @return array Setting definition
  */
-function ccx_settings_enable_cpt( $post_type ){
+function ccx_settings_enable_cpt( $post_type, $name_field = null ){
 	global $ccx_forced_cc;
 	
 	$avail_types = array( 'sermon', 'event', 'location', 'person' );
@@ -140,12 +153,15 @@ function ccx_settings_enable_cpt( $post_type ){
 	}
 	$desc = ucfirst( sprintf(  __( '%s posts already enabled by current theme', 'jsccx' ), $post_type ) );
 	
+	if( is_null( $name_field ) )
+		$name_field = sprintf( __( 'Enable %s posts', 'jsccx' ), $post_type );
+	
 	$cpt_setting = array(
-		'name' 							=> sprintf( __( 'Enable %s posts', 'jsccx' ), $post_type ),
+		'name' 							=> $name_field,
 		'after_name'  			=> '',
 		'desc'       			 	=> $is_enabled_by_theme ? $desc : '',
 		'type'        			=> 'checkbox', 
-		'checkbox_label'    => sprintf( __( 'Enable %s posts for current theme', 'jsccx' ), $post_type ), 
+		'checkbox_label'    => sprintf( __( 'Enable %s posts', 'jsccx' ), $post_type ), 
 		'inline'            => false, 
 		'options'           => array(),
 		'upload_button'     => '', 
@@ -201,3 +217,66 @@ function ccx_settings_content( $content ){
 	return $display;
 }
 
+/**
+ * Shortcut for setting to enable of the CC categories 
+ *
+ * @since 0.3
+ * @global $ccx_forced_cc
+ * @param string $category Category for setting
+ * @param string $name_field String for field name
+ * @return array Setting definition
+ */
+function ccx_settings_enable_category( $category, $name_field = null ){
+	global $ccx_forced_cc;
+	
+	// categories
+	$avail_cats = array( 'sermon_series', 'sermon_speaker', 'sermon_topic', 'sermon_book', 'sermon_tag', 'event_category', 'person_group' );
+	
+	if( ! in_array( $category, $avail_cats ) ) return;
+	
+	//$supports = array( 'sermon' => 'ctc-sermons', 'event' => 'ctc-events', 'location' => 'ctc-locations', 'person' => 'people' );
+	
+	// Check if CC support is theme-defined
+	$is_enabled_by_theme = false;
+	/*
+	if( ! empty( $ccx_forced_cc ) ){
+		$featured_enabled = (bool) get_theme_support( 'ctc_' . $category );
+		$is_enabled_by_theme = $featured_enabled && ! in_array( $category, $ccx_forced_cc );
+	}
+	*/
+	$attr = array();
+	if( $is_enabled_by_theme ){
+		$attr = array( 'readonly' => 'readonly' );
+	}
+	$name = str_replace( '_', ' ', $category );
+	$desc = ucfirst( sprintf(  __( '%s category already enabled by current theme', 'jsccx' ), $name ) );
+	
+	if( is_null( $name_field ) )
+		$name_field = sprintf( __( 'Enable %s category', 'jsccx' ), $name );
+		
+	$cat_setting = array(
+		'name' 							=> $name_field,
+		'after_name'  			=> '',
+		'desc'       			 	=> $is_enabled_by_theme ? $desc : '',
+		'type'        			=> 'checkbox', 
+		'checkbox_label'    => sprintf( __( 'Enable %s', 'jsccx' ), $name ), 
+		'inline'            => false, 
+		'options'           => array(),
+		'upload_button'     => '', 
+		'upload_title'      => '', 
+		'upload_type'       => '', 
+		'upload_show_image' => false, 
+		'default'           => $is_enabled_by_theme, 
+		'no_empty'          => false, 
+		'allow_html'        => false, 
+		'attributes'        => $attr, 
+		'class'             => $is_enabled_by_theme ? 'ctc-setting-readonly' : '', 
+		'content'           => '',
+		'custom_sanitize'   => '', 
+		'custom_content'    => '', 
+		'pro'               => false, 
+		'unsupported'       => false, 
+	);
+		
+	return $cat_setting;
+}

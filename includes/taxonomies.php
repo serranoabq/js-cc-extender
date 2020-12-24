@@ -35,6 +35,6 @@ add_filter( 'ctc_taxonomy_sermon_series_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_sermon_speaker_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_sermon_topic_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_sermon_book_args', 'ccx_change_taxonomy_slug' );
-add_filter( 'ctc_taxonomy_sermon_topic_args', 'ccx_change_taxonomy_slug' );
+add_filter( 'ctc_taxonomy_sermon_tag_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_event_category_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_person_group_args', 'ccx_change_taxonomy_slug' );
