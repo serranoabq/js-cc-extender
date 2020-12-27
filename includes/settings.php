@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /**
  * Setup CCX settings page within the CT settings
  *
- * @since 0.3
+ * @since 0.1
  * @return array CCX-specific settings
  */
 function ccx_settings_setup(){
@@ -24,22 +24,25 @@ function ccx_settings_setup(){
 		'title' => __( 'CCX', 'jsccx' ),
 		'desc' => __( "Church Content Extender (CCX) provides additional options to the <b>Church Content</b> plugin", 'jsccx' ),
 		'fields' => array(
-			// Post types
-			'enable_sermon' => ccx_settings_enable_cpt( 'sermon' , __( 'Enable Church Content post types for theme' , 'jsccx' ) ),
+		
+			// Post types		
+			'post_type_note' => ccx_settings_content( __( 'Enable or disable the Church Content posts for the current theme. Some may be enabled by the theme already,', 'jsccx' ), __( 'Enable Church Content post types' , 'jsccx' ) ),
+			'enable_sermon' => ccx_settings_enable_cpt( 'sermon' ,'' ),
 			'enable_event' => ccx_settings_enable_cpt( 'event', '' ),
 			'enable_location' => ccx_settings_enable_cpt( 'location', '' ),
 			'enable_person' => ccx_settings_enable_cpt( 'person', '' ),
 			
 			// Categories
-			'enable_sermon_speaker' => ccx_settings_enable_category( 'sermon_speaker', __( 'Enable categories for theme', 'jsccx') ),
-			'enable_sermon_topic' => ccx_settings_enable_category( 'sermon_topic', '' ),
-			'enable_sermon_series' => ccx_settings_enable_category( 'sermon_series', '' ),
-			'enable_sermon_tag' => ccx_settings_enable_category( 'sermon_tag', '' ),
-			'enable_sermon_book' => ccx_settings_enable_category( 'sermon_book', '' ),
-			'enable_event_category' => ccx_settings_enable_category( 'event_category', '' ),
-			'enable_event_category' => ccx_settings_enable_category( 'person_group', '' ),
+			'category_note' => ccx_settings_content( __( 'Enable or disable categories for Church Content posts.,', 'jsccx' ), __( 'Enable Church Content categories' , 'jsccx' ) ),
+			'enable_sermon_speaker' => ccx_settings_enable_category( 'sermon_speaker', ' ' ),
+			'enable_sermon_series' => ccx_settings_enable_category( 'sermon_series', ' ' ),
+			'enable_sermon_book' => ccx_settings_enable_category( 'sermon_book', ' ' ),
+			'enable_sermon_topic' => ccx_settings_enable_category( 'sermon_topic', ' ' ),
+			'enable_sermon_tag' => ccx_settings_enable_category( 'sermon_tag', ' ' ),
+			'enable_event_category' => ccx_settings_enable_category( 'event_category', ' ' ),
+			'enable_person_group' => ccx_settings_enable_category( 'person_group', ' ' ),
 			
-			// Images
+			//Images			
 			'default_sermon_image' => ccx_settings_default_image( 'sermon' ),
 			'default_event_image' => ccx_settings_default_image( 'event' ),
 			'default_location_image' => ccx_settings_default_image( 'location' ),
@@ -92,26 +95,40 @@ add_filter( 'ctc_settings_config', 'ctc_settings_filter', 2 );
  * @return array Setting definition  
  */
 function ccx_settings_default_image( $post_type ){
+	global $ccx_forced_cc;
+	
 	$avail_types = array( 'sermon', 'event', 'location', 'person' );
 	
+	// Get appropriate wording
+	$ctc_settings = get_option( 'ctc_settings' );
+	$sermon_word_singular = strtolower( $ctc_settings[ 'sermon_word_singular' ] );
+	
 	if( ! in_array( $post_type, $avail_types ) ) return;
+	
+	$is_enabled = in_array( $post_type, $ccx_forced_cc );
+	$attr = array();
+	if( ! $is_enabled ){
+		$attr = array( 'readonly' => 'readonly' );
+	}
+	
+	$post_type = 'sermon' == $post_type ? $sermon_word_singular : $post_type;
 	
 	$default_image_setting = array(
 		'name' 							=> sprintf( __( 'Default %s image','jsccx' ), $post_type ),
 		'after_name'  			=> '',
-		'desc'       			 	=> sprintf( __( 'Default featured image to attach to %s posts', 'jsccx' ), $post_type ),
+		'desc'       			 	=> ' ',
 		'type'        			=> 'upload', 
 		'checkbox_label'    => '', 
 		'inline'            => false, 
 		'options'           => array(),
-		'upload_button'     => 'Choose image', 
+		'upload_button'     => __( 'Choose image', 'jsccx' ),
 		'upload_title'      => __( 'Default image', 'jsccx'), 
 		'upload_type'       => 'image', 
 		'upload_show_image' => 200, 
 		'default'           => '', 
 		'no_empty'          => false, 
 		'allow_html'        => false, 
-		'attributes'        => array(), 
+		'attributes'        => $attr, 
 		'class'             => '', 
 		'content'           => '',
 		'custom_sanitize'   => '', 
@@ -126,26 +143,26 @@ function ccx_settings_default_image( $post_type ){
 /**
  * Shortcut for setting to enable of the CC custom post types and associated options 
  *
- * @since 0.3
- * @global $ccx_forced_cc
- * @param string $post_type Post type for setting
- * @param string $name_field String for field name
+ * @since 0.1
+ * @global $ccx_theme_cc
  * @return array Setting definition
  */
 function ccx_settings_enable_cpt( $post_type, $name_field = null ){
-	global $ccx_forced_cc;
+	global $ccx_theme_cc;
+	
+	// Get appropriate wording
+	$ctc_settings = get_option( 'ctc_settings' );
+	$sermon_word_singular = $ctc_settings[ 'sermon_word_singular' ];
 	
 	$avail_types = array( 'sermon', 'event', 'location', 'person' );
-	$supports = array( 'sermon' => 'ctc-sermons', 'event' => 'ctc-events', 'location' => 'ctc-locations', 'person' => 'people' );
+	$supports = array( 'sermon' => 'ctc-sermons', 'event' => 'ctc-events', 'location' => 'ctc-locations', 'person' => 'ctc-people' );
 	
 	if( ! in_array( $post_type, $avail_types ) ) return;
 	
 	// Check if CC support is theme-defined
-	$is_enabled_by_theme = false;
-	if( ! empty( $ccx_forced_cc ) ){
-		$featured_enabled = (bool) get_theme_support( $supports[ $post_type ] );
-		$is_enabled_by_theme = $featured_enabled && ! in_array( $post_type, $ccx_forced_cc );
-	}
+	$is_enabled_by_theme = in_array( $post_type, $ccx_theme_cc );
+	
+	$post_type = 'sermon' == $post_type ? $sermon_word_singular : $post_type;
 	
 	$attr = array();
 	if( $is_enabled_by_theme ){
@@ -161,7 +178,7 @@ function ccx_settings_enable_cpt( $post_type, $name_field = null ){
 		'after_name'  			=> '',
 		'desc'       			 	=> $is_enabled_by_theme ? $desc : '',
 		'type'        			=> 'checkbox', 
-		'checkbox_label'    => sprintf( __( 'Enable %s posts', 'jsccx' ), $post_type ), 
+		'checkbox_label'    => ucfirst( sprintf( __( '%s posts', 'jsccx' ), $post_type ) ), 
 		'inline'            => false, 
 		'options'           => array(),
 		'upload_button'     => '', 
@@ -190,9 +207,9 @@ function ccx_settings_enable_cpt( $post_type, $name_field = null ){
  * @param $content string Display content
  * @return array Setting definition
  */
-function ccx_settings_content( $content ){
+function ccx_settings_content( $content, $name_field = null ){
 	$display = array(
-		'name' 							=> '',
+		'name' 							=> $name_field,
 		'after_name'  			=> '',
 		'desc'       			 	=> '',
 		'type'        			=> 'content', 
@@ -220,36 +237,22 @@ function ccx_settings_content( $content ){
 /**
  * Shortcut for setting to enable of the CC categories 
  *
- * @since 0.3
- * @global $ccx_forced_cc
- * @param string $category Category for setting
- * @param string $name_field String for field name
+ * @since 0.1
  * @return array Setting definition
  */
 function ccx_settings_enable_category( $category, $name_field = null ){
-	global $ccx_forced_cc;
+	
+	// Get appropriate wording
+	$ctc_settings = get_option( 'ctc_settings' );
+	$sermon_word_singular = $ctc_settings[ 'sermon_word_singular' ];
 	
 	// categories
 	$avail_cats = array( 'sermon_series', 'sermon_speaker', 'sermon_topic', 'sermon_book', 'sermon_tag', 'event_category', 'person_group' );
 	
 	if( ! in_array( $category, $avail_cats ) ) return;
 	
-	//$supports = array( 'sermon' => 'ctc-sermons', 'event' => 'ctc-events', 'location' => 'ctc-locations', 'person' => 'people' );
-	
-	// Check if CC support is theme-defined
-	$is_enabled_by_theme = false;
-	/*
-	if( ! empty( $ccx_forced_cc ) ){
-		$featured_enabled = (bool) get_theme_support( 'ctc_' . $category );
-		$is_enabled_by_theme = $featured_enabled && ! in_array( $category, $ccx_forced_cc );
-	}
-	*/
-	$attr = array();
-	if( $is_enabled_by_theme ){
-		$attr = array( 'readonly' => 'readonly' );
-	}
 	$name = str_replace( '_', ' ', $category );
-	$desc = ucfirst( sprintf(  __( '%s category already enabled by current theme', 'jsccx' ), $name ) );
+	$name = str_replace( 'sermon', $sermon_word_singular, $name );
 	
 	if( is_null( $name_field ) )
 		$name_field = sprintf( __( 'Enable %s category', 'jsccx' ), $name );
@@ -257,20 +260,20 @@ function ccx_settings_enable_category( $category, $name_field = null ){
 	$cat_setting = array(
 		'name' 							=> $name_field,
 		'after_name'  			=> '',
-		'desc'       			 	=> $is_enabled_by_theme ? $desc : '',
+		'desc'       			 	=> '',
 		'type'        			=> 'checkbox', 
-		'checkbox_label'    => sprintf( __( 'Enable %s', 'jsccx' ), $name ), 
+		'checkbox_label'    => ucfirst( $name ), 
 		'inline'            => false, 
 		'options'           => array(),
 		'upload_button'     => '', 
 		'upload_title'      => '', 
 		'upload_type'       => '', 
 		'upload_show_image' => false, 
-		'default'           => $is_enabled_by_theme, 
+		'default'           => false, 
 		'no_empty'          => false, 
 		'allow_html'        => false, 
-		'attributes'        => $attr, 
-		'class'             => $is_enabled_by_theme ? 'ctc-setting-readonly' : '', 
+		'attributes'        => '', 
+		'class'             => '', 
 		'content'           => '',
 		'custom_sanitize'   => '', 
 		'custom_content'    => '', 

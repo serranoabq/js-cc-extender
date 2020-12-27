@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Church Content Extender
  * Description: Plugin to augment the Church Content plugin by adding additional features. Requires <strong>Church Content</strong> plugin.
- * Version: 0.2
+ * Version: 0.3
  * Author: Justin Serrano
  * Text Domain: jsccx
  *
@@ -69,7 +69,7 @@ class CCExtender {
 		add_action( 'plugins_loaded', array( $this, 'load_includes' ) );
 		
 		// Force CC support
-		add_action( 'after_setup_theme', array( $this, 'add_theme_support' ) );
+		add_action( 'after_setup_theme', array( $this, 'add_theme_support' ), 11 );
 
 	}
 
@@ -262,74 +262,94 @@ class CCExtender {
 	 * @since 0.3
 	 * @access public
 	 * @global $ccx_forced_cc Array of elements with forced support
+	 * @global $ccx_theme_cc Array of elements supported by theme
 	 */
 	public function add_theme_support(){
-		global $ccx_forced_cc; 
+		global $ccx_forced_cc; // feature forced by CCX
+		global $ccx_theme_cc;  // feature defined by theme
+		
 		$ccx_forced_cc = array();
+		$ccx_theme_cc = array();
 		
 		if( ! class_exists( 'Church_Theme_Content' ) ) return;
-		if( current_theme_supports( 'church-theme-content' ) ) return;
 		
 		add_theme_support( 'church-theme-content' );
 		$ccx_forced_cc = array( 'ctc' );
 		
+		// Available types and categories
+		$avail_types = array(
+			'ctc-sermons' => array( 
+				'name' => 'sermon',
+				'taxonomies' => array( 'ctc_sermon_series', 'ctc_sermon_book', 'ctc_sermon_speaker', 'ctc_sermon_tag', 'ctc_sermon_topic' )
+			),
+			'ctc-events' => array( 
+				'name' => 'event',
+				'taxonomies' => array( 'ctc_event_category' )
+			),
+			'ctc-locations' => array( 
+				'name' => 'location',
+				'taxonomies' => array()
+			),
+			'ctc-people' => array( 
+				'name' => 'person',
+				'taxonomies' => array( 'ctc_person_group' )
+			),
+		);
+		
+		// Get settings
 		$ctc_settings = get_option( 'ctc_settings' );
-		if( $ctc_settings[ 'enable_sermon' ] ) {
-			array_push( $ccx_forced_cc, 'sermon' );
-			$tax = array();
-			if( $ctc_settings[ 'enable_sermon_series' ] ){
-				array_push( $tax, 'ctc_sermon_series' );
-				array_push( $ccx_forced_cc, 'sermon_series' );
-			}
-			if( $ctc_settings[ 'enable_sermon_speaker' ] ){
-				array_push( $tax, 'ctc_sermon_speaker' );
-				array_push( $ccx_forced_cc, 'sermon_speaker' );
-			}
-			if( $ctc_settings[ 'enable_sermon_topic' ] ){
-				array_push( $tax, 'ctc_sermon_topic' );
-				array_push( $ccx_forced_cc, 'sermon_topic' );
-			}
-			if( $ctc_settings[ 'enable_sermon_book' ] ){
-				array_push( $tax, 'ctc_sermon_book' );
-				array_push( $ccx_forced_cc, 'sermon_book' );
-			}
-			if( $ctc_settings[ 'enable_sermon_tag' ] ){
-				array_push( $tax, 'ctc_sermon_tag' );
-				array_push( $ccx_forced_cc, 'sermon_tag' );
+
+		// Loop over every post to enable it
+		$options = array();
+		foreach( $avail_types as $post_type => $setting ){
+			
+			// If theme supports the type, add it to the theme_cc var
+			$fields = array();
+			$field_overrides = array();
+			if( current_theme_supports( $post_type ) ) {
+				
+				$supports = get_theme_support( $post_type );
+				if( isset( $supports[0]['fields'] ) ) { 
+					$fields = $supports[0]['fields'];
+				}
+				
+				if( isset( $supports[0]['field_overrides'] ) ) {
+					$field_overrides = $supports[0]['field_overrides' ];
+				}
+				
+				array_push( $ccx_theme_cc, $setting['name'] );
+				remove_theme_support( $post_type );
+				
+				// force enable the setting
+				$ctc_settings[ 'enable_' . $setting['name'] ] = 1;
+				update_option( 'ctc_settings', $ctc_settings );
+			} 
+			
+			$taxes = array();
+			if( $ctc_settings[ 'enable_' . $setting['name'] ] ){
+				
+				// Post_type enabled in CCX settings 
+				array_push( $ccx_forced_cc, $setting['name'] );
+				
+				// Enable categories
+				foreach( $setting[ 'taxonomies'] as $tax ){
+					if( $ctc_settings[ str_replace( 'ctc_', 'enable_', $tax ) ] ) {
+						array_push( $taxes, $tax );
+						array_push( $ccx_forced_cc, str_replace( 'ctc_', '', $tax ) );
+					}
+				}
+				
+				// Ensure other options defined by the theme are kept
+				$options[ 'taxonomies' ] = $taxes;
+				if( isset( $fields ) ) 
+					$options[ 'fields' ] = $fields;
+				if( isset( $field_overrides ) ) 
+					$options[ 'field_overrides' ] = $field_overrides;
+				
+				// Add theme support
+				add_theme_support( $post_type, $options );
 			}
 			
-			add_theme_support( 'ctc-sermons', array(
-				'taxonomies' => $tax
-			) );
-		}
-		
-		if( $ctc_settings[ 'enable_location' ] ){
-			array_push( $ccx_forced_cc, 'location' );
-			add_theme_support( 'ctc-locations' );
-		}
-		
-		if( $ctc_settings[ 'enable_person' ] ){
-			array_push( $ccx_forced_cc, 'person' );
-			$tax = array();
-			if( $ctc_settings[ 'enable_person_group' ] ){
-				array_push( $tax, 'ctc_person_group' );
-				array_push( $ccx_forced_cc, 'person_group' );
-			}
-			add_theme_support( 'ctc-people', array( 
-				'taxonomies' => $tax
-			) );
-		}
-		
-		if( $ctc_settings[ 'enable_event' ] ) {
-			array_push( $ccx_forced_cc, 'event' );
-			$tax = array();
-			if( $ctc_settings[ 'enable_event_category' ] ){
-				array_push( $tax, 'ctc_event_category' );
-				array_push( $ccx_forced_cc, 'event_category' );
-			}
-			add_theme_support( 'ctc-events', array( 
-				'taxonomies' => $tax
-			) );
 		}
 		
 	}
