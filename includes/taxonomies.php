@@ -39,6 +39,10 @@ add_filter( 'ctc_taxonomy_sermon_topic_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_event_category_args', 'ccx_change_taxonomy_slug' );
 add_filter( 'ctc_taxonomy_person_group_args', 'ccx_change_taxonomy_slug' );
 
+/**********************************
+ * SERMON SERIES IMAGE SETTINGS
+ **********************************/
+
 /**
  * Form to add/update/remove sermon series image
  *
@@ -56,7 +60,7 @@ function ccx_category_form( $value = null ){
 		<td>
 			<input type="hidden" id="ccx-sermon-image-id" name="ccx-sermon-image-id" class="custom_media_url" value=" <?php echo $value; ?>">
 			<div id="ccx-sermon-image-wrapper">
-				<?php if( $value ) echo wp_get_attachment_image( $value, 'full' ); ?>
+				<?php if( $value ) echo wp_get_attachment_image( $value, array( '200', '200' ) ); ?>
 			</div>
 			<p>
 				<input type="button" class="button button-secondary ccx_tax_media_add" id="ccx_tax_media_add" name="ccx_tax_media_add" value="<?php echo $add_replace_string; ?>" />
@@ -144,7 +148,7 @@ function ccx_category_image_script(){
 				
 				// Add values to setting
 				$('#ccx-sermon-image-id').val( attachment.id );
-				$('#ccx-sermon-image-wrapper').html( '<img src="'+attachment.url+'" alt="" style="max-width:100%;"/>' );
+				$('#ccx-sermon-image-wrapper').html( '<img src="'+attachment.url+'" alt="" style="max-width:200px; max-height:200px;"/>' );
 
 				// Replace buttons
 				$('#ccx_tax_media_remove' ).removeClass( 'hidden' );
@@ -202,4 +206,35 @@ function ccx_load_media(){
 	wp_enqueue_media();
 }
 add_action( 'admin_enqueue_scripts', 'ccx_load_media' );
- 
+
+
+/**
+ * Add image column for sermon series table
+ *
+ * @since 0.36
+ */
+function ccx_add_image_column( $columns ){
+	$col = 1; // position of new column
+	
+	$columns = array_slice( $columns, 0, $col, true ) + array('image' => __( 'Image', 'jsccx' ) ) + array_slice( $columns, $col, count( $columns) - 1, true );
+	
+	return $columns;
+}
+add_filter('manage_edit-ctc_sermon_series_columns' , 'ccx_add_image_column');
+
+
+/**
+ * Add image to sermon series table entry 
+ *
+ * @since 0.36
+ */
+function ccx_add_column_image( $content, $column_name, $term_id ){
+		$value = get_term_meta( $term_id, 'ccx-sermon-image-id', true );
+		
+		if( 'image' != $column_name ) return $content;
+		if( $value ){
+			$content = wp_get_attachment_image( $value, array('60','60' ) );
+    }
+	return $content;
+}
+add_filter( 'manage_ctc_sermon_series_custom_column', 'ccx_add_column_image', 10, 3 );
