@@ -23,13 +23,30 @@ function ccx_save_image( $post_id ){
 	$thumbnail_id = get_post_thumbnail_id( $post_id );
 	if( $thumbnail_id ) return;
 	
-	// Use the post type to get the right setting 
-	$ctc_settings = get_option( 'ctc_settings' );
 	$post_type = str_replace( 'ctc_', '', get_post_type( $post_id ) );
-	$new_image = $ctc_settings[ 'default_' . $post_type . '_image' ];
 	
-	// Get image id
-	$new_image_id = ccx_get_attachment_id( $new_image );
+	/**
+	 * Add sermon series image
+	 * @since 0.36
+	 */
+	if( 'sermon' == $post_type ){
+		// For sermons we can have a sermon series image
+		$series = get_the_terms( $post_id, 'ctc_sermon_series' );
+		if( $series && ! is_wp_error( $series) ) {
+			$value = get_term_meta( $series[0]->term_id, 'ccx-sermon-image-id', true );
+			if( $value ) $new_image_id = $value;
+		}
+	}
+	
+	if( ! $new_image_id ){
+		// Use the post type to get the right setting 
+		$ctc_settings = get_option( 'ctc_settings' );
+		$new_image = $ctc_settings[ 'default_' . $post_type . '_image' ];
+		
+		// Get image id
+		$new_image_id = ccx_get_attachment_id( $new_image );		
+	}
+	
 	if( ! $new_image_id ) return;	
 	
 	// Add image to post

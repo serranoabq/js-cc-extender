@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Church Content Extender
  * Description: Plugin to augment the Church Content plugin by adding additional features. Requires <strong>Church Content</strong> plugin.
- * Version: 0.36
+ * Version: 0.361
  * Author: Justin Serrano
  * Text Domain: jsccx
  *
