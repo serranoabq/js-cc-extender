@@ -47,8 +47,11 @@ function ccx_settings_setup(){
 			'default_event_image' => ccx_settings_default_image( 'event' ),
 			'default_location_image' => ccx_settings_default_image( 'location' ),
 			'default_person_image' => ccx_settings_default_image( 'person' ),
+			
 		)
 	);
+	
+	$ccx_settings = ccx_migration_setting( $ccx_settings );
 	
 	return $ccx_settings;
 }
@@ -282,4 +285,66 @@ function ccx_settings_enable_category( $category, $name_field = null ){
 	);
 		
 	return $cat_setting;
+}
+
+function ccx_migration_setting( $ccx_settings ){
+		
+	// This adds the option to migratre into the settings array
+	
+	//If we haven't done the migration
+	
+	$ctc_settings = get_option( 'ctc_settings' );
+	
+	// The fields disappear if we've already migrated
+	if( $ctc_settings[ 'ccx_migrated' ] ) return $ccx_settings;
+	
+	$ccx_settings[ 'fields' ][ 'ccx_migrate' ] = array(
+		'name' 							=> __( 'Migrate from CTCEX', 'jsccx' ),
+		'after_name'  			=> '',
+		'desc'       			 	=> __( 'Migrate sermon images from CTC Extender to Church Content Extender, including sermon series images and sermon images.', 'jsccx' ),
+		'type'        			=> 'checkbox', 
+		'checkbox_label'    => __( 'Migrate from CTC Extender', 'jsccx' ), 
+		'inline'            => false, 
+		'options'           => array(),
+		'upload_button'     => '', 
+		'upload_title'      => '', 
+		'upload_type'       => '', 
+		'upload_show_image' => false, 
+		'default'           => false, 
+		'no_empty'          => false, 
+		'allow_html'        => false, 
+		'attributes'        => '', 
+		'class'             => '', 
+		'content'           => '',
+		'custom_sanitize'   => '', 
+		'custom_content'    => '', 
+		'pro'               => false, 
+		'unsupported'       => false, 
+	);
+		
+	$ccx_settings[ 'fields' ][ 'ccx_migrate_blanks' ] = array(
+		'name' 							=> ' ',
+		'after_name'  			=> '',
+		'desc'       			 	=> __( 'This will apply the default image (if set above) to posts that don\'t have a featured image. Default setting is to NOT apply it. Use caution as it\'s not reversible. ', 'jsccx' ),
+		'type'        			=> 'checkbox', 
+		'checkbox_label'    => __( 'Apply default images to sermon posts without a CTC Extender image', 'jsccx' ), 
+		'inline'            => false, 
+		'options'           => array(),
+		'upload_button'     => '', 
+		'upload_title'      => '', 
+		'upload_type'       => '', 
+		'upload_show_image' => false, 
+		'default'           => false, 
+		'no_empty'          => false, 
+		'allow_html'        => false, 
+		'attributes'        => '', 
+		'class'             => '', 
+		'content'           => '',
+		'custom_sanitize'   => '', 
+		'custom_content'    => '', 
+		'pro'               => false, 
+		'unsupported'       => false, 
+	);
+	
+	return $ccx_settings;
 }

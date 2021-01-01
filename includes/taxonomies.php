@@ -58,7 +58,7 @@ function ccx_category_form( $value = null ){
 			<label for="category-image-id"><?php _e('Image', 'jsccx'); ?></label>
 		</th>
 		<td>
-			<input type="hidden" id="ccx-sermon-image-id" name="ccx-sermon-image-id" class="custom_media_url" value=" <?php echo $value; ?>">
+			<input type="hidden" id="ccx_sermon_series_image_id" name="ccx_sermon_series_image_id" class="custom_media_url" value=" <?php echo $value; ?>">
 			<div id="ccx-sermon-image-wrapper">
 				<?php if( $value ) echo wp_get_attachment_image( $value, array( '200', '200' ) ); ?>
 			</div>
@@ -91,7 +91,7 @@ add_action( 'ctc_sermon_series_add_form_fields',  'ccx_add_category_image' );
  * @since 0.35
  */
 function ccx_edit_category_image( $term, $taxonomy ){
-	$value = get_term_meta( $term -> term_id, 'ccx-sermon-image-id', true );
+	$value = get_term_meta( $term -> term_id, 'ccx_sermon_series_image_id', true );
 	ccx_category_form( $value );
 }
 add_action( 'ctc_sermon_series_edit_form_fields',  'ccx_edit_category_image', 10, 2 );
@@ -102,13 +102,13 @@ add_action( 'ctc_sermon_series_edit_form_fields',  'ccx_edit_category_image', 10
  * @since 0.35
  */
 function ccx_save_category_image( $term_id ){
-	if( ! isset( $_POST['ccx-sermon-image-id'] ) ) return;
-	$image =  $_POST['ccx-sermon-image-id'];
+	if( ! isset( $_POST['ccx_sermon_series_image_id'] ) ) return;
+	$image =  $_POST['ccx_sermon_series_image_id'];
 	
 	if( '' != $image ){
-		update_term_meta( $term_id, 'ccx-sermon-image-id', $image );
+		update_term_meta( $term_id, 'ccx_sermon_series_image_id', $image );
 	} else {
-		delete_term_meta( $term_id, 'ccx-sermon-image-id' );
+		delete_term_meta( $term_id, 'ccx_sermon_series_image_id' );
 	}
 }
 add_action( 'created_ctc_sermon_series', 'ccx_save_category_image' );
@@ -147,7 +147,7 @@ function ccx_category_image_script(){
 				var attachment = media_frame.state().get('selection').first().toJSON();
 				
 				// Add values to setting
-				$('#ccx-sermon-image-id').val( attachment.id );
+				$('#ccx_sermon_series_image_id').val( attachment.id );
 				$('#ccx-sermon-image-wrapper').html( '<img src="'+attachment.url+'" alt="" style="max-width:200px; max-height:200px;"/>' );
 
 				// Replace buttons
@@ -165,7 +165,7 @@ function ccx_category_image_script(){
 			event.preventDefault();
 			
 			// Remove setting and image display
-			$('#ccx-sermon-image-id').val( '' );
+			$('#ccx_sermon_series_image_id').val( '' );
 			$('#ccx-sermon-image-wrapper').html( '' );
 			
 			// Replace buttons
@@ -180,7 +180,7 @@ function ccx_category_image_script(){
 			
 			if( $.inArray( 'action=add-tag', data ) !== -1 && $.inArray( 'screen=edit-ctc_sermon_series', data ) !== -1 && $.inArray( 'taxonomy=ctc_sermon_series', data ) !== -1 ){
 				// Remove setting and image display
-				$('#ccx-sermon-image-id').val( '' );
+				$('#ccx_sermon_series_image_id').val( '' );
 				$('#ccx-sermon-image-wrapper').html( '' );
 				
 				// Replace buttons
@@ -229,7 +229,7 @@ add_filter('manage_edit-ctc_sermon_series_columns' , 'ccx_add_image_column');
  * @since 0.36
  */
 function ccx_add_column_image( $content, $column_name, $term_id ){
-		$value = get_term_meta( $term_id, 'ccx-sermon-image-id', true );
+		$value = get_term_meta( $term_id, 'ccx_sermon_series_image_id', true );
 		
 		if( 'image' != $column_name ) return $content;
 		if( $value ){

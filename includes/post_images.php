@@ -15,13 +15,18 @@
  * Add default image during post save if post doesn't a featured image 
  *
  * @since 0.2
- * @param $post_id Post ID
+ * @param $post_id 					Post ID
+ * @param $apply_to_blanks 	Flag to apply default image to
+ *                          posts without a featured image 
  */
-function ccx_save_image( $post_id ){
+function ccx_save_image( $post_id, $apply_to_blanks = true ){
 	
 	// Do nothing if the post already has an image
 	$thumbnail_id = get_post_thumbnail_id( $post_id );
 	if( $thumbnail_id ) return;
+	
+	// Skip if not set
+	if( 0 === $thumbnail_id && ! $apply_to_blanks ) return;
 	
 	$post_type = str_replace( 'ctc_', '', get_post_type( $post_id ) );
 	
@@ -33,7 +38,7 @@ function ccx_save_image( $post_id ){
 		// For sermons we can have a sermon series image
 		$series = get_the_terms( $post_id, 'ctc_sermon_series' );
 		if( $series && ! is_wp_error( $series) ) {
-			$value = get_term_meta( $series[0]->term_id, 'ccx-sermon-image-id', true );
+			$value = get_term_meta( $series[0]->term_id, 'ccx_sermon_series_image_id', true );
 			if( $value ) $new_image_id = $value;
 		}
 	}
