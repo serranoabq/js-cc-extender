@@ -287,17 +287,18 @@ function ccx_settings_enable_category( $category, $name_field = null ){
 	return $cat_setting;
 }
 
+/**
+ * Add migration setting
+ *
+ * @since 0.4
+ */
 function ccx_migration_setting( $ccx_settings ){
-		
-	// This adds the option to migratre into the settings array
-	
-	//If we haven't done the migration
-	
+ 
 	$ctc_settings = get_option( 'ctc_settings' );
 	
-	// The fields disappear if we've already migrated
+	// Skip the setting if we've already migrated
 	if( $ctc_settings[ 'ccx_migrated' ] ) return $ccx_settings;
-	
+		
 	$ccx_settings[ 'fields' ][ 'ccx_migrate' ] = array(
 		'name' 							=> __( 'Migrate from CTCEX', 'jsccx' ),
 		'after_name'  			=> '',

@@ -9,11 +9,7 @@
  * @since      	0.4
  */ 
 
-// What needs to migrate?
-// Sermon images
-//
-
-/**
+=/**
  * Add image to sermon series table entry 
  *
  * @since 0.4
@@ -21,13 +17,16 @@
 function ccx_migrate(){
 	$ctc_settings = get_option( 'ctc_settings' );
 	
+	// Check for pervious migration flag
 	if( $ctc_settings[ 'ccx_migrated' ] ) return;
 	
+	// Migrate series image
 	ccx_series_migrate();
 	
+	// Migrate sermon image
 	ccx_sermon_migrate( $ctc_settings[ 'ccx_migrate_blanks' ] );
 	
-	
+	// Set migrated flag
 	$ctc_settings[ 'ccx_migrated' ] = 1;
 	
 	update_option( 'ctc_settings', $ctc_settings );
@@ -76,6 +75,7 @@ function ccx_series_migrate(){
 	foreach( $terms as $term ){
 		$term_id = $term -> term_id;
 		
+		// Check for the CTCEX meta
 		$ctcex_img = get_term_meta( $term_id, 'ctc_sermon_series_image', true );
 		
 		if( $ctcex_img ){
