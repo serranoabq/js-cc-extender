@@ -69,7 +69,7 @@ class CCExtender {
 		add_action( 'plugins_loaded', array( $this, 'load_includes' ) );
 		
 		// Force CC support
-		add_action( 'after_setup_theme', array( $this, 'add_theme_support' ), 11 );
+		add_action( 'after_setup_theme', array( $this, 'add_theme_support' ), 12 );
 
 	}
 
@@ -170,8 +170,9 @@ class CCExtender {
 				CCX_INC_DIR . '/post_types.php',
 				CCX_INC_DIR . '/post_images.php',
 				CCX_INC_DIR . '/taxonomies.php',
+				CCX_INC_DIR . '/helpers.php',
+				CCX_INC_DIR . '/shortcodes.php',
 				//CCX_INC_DIR . '/publics.php',
-				//CCX_INC_DIR . '/helpers.php',
 				//CCX_INC_DIR . '/support.php',
 
 			),
@@ -273,6 +274,9 @@ class CCExtender {
 		
 		if( ! class_exists( 'Church_Theme_Content' ) ) return;
 		
+		if( ! current_theme_supports( 'responsive-embeds' ) )
+			add_theme_support( 'responsive-embeds' );
+		
 		add_theme_support( 'church-theme-content' );
 		$ccx_forced_cc = array( 'ctc' );
 		
@@ -341,9 +345,9 @@ class CCExtender {
 				
 				// Ensure other options defined by the theme are kept
 				$options[ 'taxonomies' ] = $taxes;
-				if( isset( $fields ) ) 
+				if( ! empty( $fields ) ) 
 					$options[ 'fields' ] = $fields;
-				if( isset( $field_overrides ) ) 
+				if( ! empty( $field_overrides ) ) 
 					$options[ 'field_overrides' ] = $field_overrides;
 				
 				// Add theme support
