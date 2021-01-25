@@ -101,7 +101,6 @@ function ccx_sermon_detail_shortcode( $attr ){
 	}
 	
 	$data = ccx_get_CTC_data( 'ctc_sermon', $id );
-	//ccx_shortcode_query( 'ctc_sermon', $id );
 	$classes = ccx_shortcode_classes();
 	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
 	
@@ -350,64 +349,6 @@ function ccx_sermon_media( $data, $classes ){
 }
 */
 
-/**
- * Create a query to get post data
- *
- * @since 0.5
- * @return array Data with CTC post information
- */
-function ccx_shortcode_query( $post_type, $post_id = null ){
-	
-	$query = array();
-	
-	if( ! $post_id ){
-		// No post_id given, so 2 things can happen
-		//		we are in a CTC post or not
-		$ctypes = array( 'ctc_sermon', 'ctc_location', 'ctc_event', 'ctc_person' );
-		$c_post_type = get_post_type();
-		$c_post_id = get_the_ID();
-		switch( $c_post_type ){
-			// IF the current post is a CTC post, just return the data for it, no query needed
-			case 'ctc_sermon':
-				return ccx_get_sermon_data( $c_post_id );
-				break;
-			case 'ctc_event':
-				return ccx_get_event_data( $c_post_id );
-				break;
-			case 'ctc_location':
-				return ccx_get_location_data( $c_post_id );
-				break;
-			case 'ctc_person':
-				return ccx_get_person_data( $c_post_id );
-				break;
-			default:
-				// Otherwise, query the latest post of the type specified
-				$query = array(
-					'post_type'					=> $post_type,
-					'order' 						=> 'DESC',
-					'orderby' 					=> 'date',
-					'posts_per_page'		=> 1,
-				);
-				$m_posts = new WP_Query( $query );		
-				if( $m_posts->have_posts() ):
-					while ( $m_posts->have_posts() ) :
-						$m_posts->the_post();
-						$data = ccx_get_CTC_data( $post_type, get_the_ID() );
-					endwhile;
-				endif;
-				
-				wp_reset_query();
-
-				break;		
-		}
-	} else{
-		// IF we get an ID, then we just pull up that specific post
-		$data = ccx_get_CTC_data( $post_type, $post_id );
-	}
-
-	return $data;
-	
-}
 
 
 function ccx_shortcode_style(){
