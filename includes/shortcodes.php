@@ -44,7 +44,7 @@ add_action( 'admin_init', 'ccx_shortcode_metabox' );
  * @since 0.5
  */
 function ccx_shortcode_metabox_render( $args ){
-	
+	error_log(json_encode($args));
 	echo sprintf('[ccx_sermon_details id="%s" hide_title]', $args->ID );
 	
 }

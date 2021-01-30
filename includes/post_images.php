@@ -34,6 +34,7 @@ function ccx_save_image( $post_id, $apply_to_blanks = true ){
 	 * Add sermon series image
 	 * @since 0.36
 	 */
+	$new_image_id = '';									 
 	if( 'sermon' == $post_type ){
 		// For sermons we can have a sermon series image
 		$series = get_the_terms( $post_id, 'ctc_sermon_series' );

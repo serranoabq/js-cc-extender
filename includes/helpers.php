@@ -123,7 +123,7 @@ function ccx_get_event_data( $post_id ){
 	if( $time ) $time = date('g:ia', strtotime( $time ) );
 	if( $endtime && $time) $endtime = date('g:ia', strtotime( $endtime ) );
 	$recurrence = get_post_meta( $post_id, '_ctc_event_recurrence' , true ); 
-	$recurrence_note = $this->get_recurrence_note( get_post( $post_id ) );
+	$recurrence_note = ccx_get_recurrence_note( get_post( $post_id ) );
 	
 	$venue = get_post_meta( $post_id, '_ctc_event_venue' , true ); 
 	$address = get_post_meta( $post_id, '_ctc_event_address' , true ); 
@@ -269,4 +269,85 @@ function ccx_get_CTC_data( $post_type, $post_id ){
 			return ccx_get_person_data( $post_id );
 			break;
 	}
+}
+
+/**
+ * Get recurrence string from event posts
+ *
+ * @since 0.51
+ * @param $post_obj Post object for event post
+ * @return string Recurrence string
+ */
+function ccx_get_recurrence_note( $post_obj ) {
+	if( !isset( $post_obj ) )
+		global $post;
+	else
+		$post = $post_obj;
+	
+	$start_date = trim( get_post_meta( $post->ID , '_ctc_event_start_date' , true ) );
+	$recurrence = get_post_meta( $post->ID , '_ctc_event_recurrence' , true );
+	if( $recurrence == 'none' ) return '';
+	
+	$recurrence_end_date = get_post_meta( $post->ID, '_ctc_event_recurrence_end_date', true );
+	$recurrence_period = get_post_meta( $post->ID , '_ctc_event_recurrence_period' , true );
+	$recurrence_monthly_type = get_post_meta( $post->ID , '_ctc_event_recurrence_monthly_type' , true );
+	$recurrence_monthly_week = get_post_meta( $post->ID , '_ctc_event_recurrence_monthly_week' , true );
+	$recurrence_note = '';
+	
+	// Frequency
+	switch ( $recurrence ) {
+
+		case 'daily' :
+			$recurrence_note = sprintf( 
+				_n( 'Every day','Every %d days', (int)$recurrence_period, 'ctcex' ), 
+				(int)$recurrence_period 
+			);
+			break;
+			
+		case 'weekly' :
+			$recurrence_note = sprintf( 
+				_n( 'Every %s', '%ss every %d weeks', (int)$recurrence_period, 'ctcex' ), date_i18n( 'l' , strtotime( $start_date ) ),
+				(int)$recurrence_period 
+			);
+			break;
+
+		case 'monthly' :
+			$recurrence_note = sprintf( 
+				_n( 'Every month','Every %d months', (int)$recurrence_period, 'ctcex' ), 
+				(int)$recurrence_period 
+			);
+			break;
+
+		case 'yearly' :
+			$recurrence_note = sprintf( 
+				_n( 'Every year','Every %d years', (int)$recurrence_period, 'ctcex' ), 
+				(int)$recurrence_period 
+			);
+			break;
+
+	}
+	
+	if( 'monthly' == $recurrence && $recurrence_monthly_type && $recurrence_monthly_week ) {
+		if( 'day' == $recurrence_monthly_type ) {
+			$recurrence_note .= sprintf( _x(' on the %s', 'Date expression. As in " on the 1st/2nd...31st of the month". Note the space before.', 'ctcex'), date_i18n( 'jS' , strtotime( $start_date ) ) );
+		} else {
+			$ends = array( 
+				'1' => _x( '1st', 'As in "1st Sun/Mon... of the month"', 'ctcex'), 
+				'2' => _x( '2nd', 'As in "2nd Sun/Mon... of the month"', 'ctcex'), 
+				'3' => _x( '3rd', 'As in "3rd Sun/Mon... of the month"', 'ctcex'), 
+				'4' => _x( '4th', 'As in "4th Sun/Mon... of the month"', 'ctcex') 
+			);
+			if( $recurrence_monthly_week != 'last' )
+				$recurrence_monthly_week = $ends[ $recurrence_monthly_week ];
+			else
+				$recurrence_monthly_week = _x( 'last', 'As in "last Sun/Mon... of the month"', 'ctcex');
+				
+			$recurrence_note .= sprintf( _x(' on the %s %s', 'Date expression. As in " on the 1st/2nd... Sun/Mon...". Note the space before.', 'ctcex'), $recurrence_monthly_week, date_i18n( 'l' , strtotime( $start_date ) ) );
+		}
+	}
+	
+	if( $recurrence_end_date ) {
+		$recurrence_note .= sprintf( ' until %s', date_i18n( 'D, M jS' , strtotime( $recurrence_end_date ) ) );
+	}
+	return $recurrence_note;
 }

@@ -74,3 +74,95 @@ add_filter( 'ctc_post_type_sermon_args', 'ccx_change_slug' );
 add_filter( 'ctc_post_type_location_args', 'ccx_change_slug' );
 add_filter( 'ctc_post_type_event_args', 'ccx_change_slug' );
 add_filter( 'ctc_post_type_person_args', 'ccx_change_slug' );
+
+/**
+ * Add new recurrence settings to event post types
+ *
+ * @since 0.51
+ * @return object Filtered meta box
+ */
+function ccx_metabox_filter_event_date( $meta_box ) {
+	
+	// With the exception of daily recurrence, the other settings 
+	// are included in the CTC plugin, but are not exposed by default. 
+	
+	// Add daily recurrence 
+	$options = $meta_box['fields']['_ctc_event_recurrence']['options'];
+	
+	$meta_box['fields']['_ctc_event_recurrence']['options'] = ctc_array_merge_after_key(
+		$options, 
+		array( 'daily' => _x( 'Daily', 'event meta box', 'jsccx' ) ),
+		'none'	
+	);
+	
+	// Add recurrence period
+	$recurrence_period = array(
+		'name'	=> __( 'Recurrence Period', 'jsccx' ),
+		'after_name'	=> '',
+		'after_input'	=> '',
+		'desc'	=> _x( 'Recur every N days/weeks/months/years', 'event meta box', 'jsccx' ),
+		'type'	=> 'select', 
+		'options'	=> array_combine( range(1,12), range(1,12) ) ,
+		'default'	=> '1', 
+		'no_empty'	=> true, 
+		'allow_html'	=> false, 
+		'visibility' 		=> array( 
+			'_ctc_event_recurrence' => array( 'none', '!=' ),
+		)
+	);
+	$meta_box['fields'] = ctc_array_merge_after_key(
+		$meta_box['fields'], 
+		array( '_ctc_event_recurrence_period' => $recurrence_period ),
+		'_ctc_event_recurrence'	
+	);
+	
+	// Add recurrence monthly type
+	$recurrence_monthly_type = array(
+		'name'	=> __( 'Monthly Recurrence Type', 'jsccx' ),
+		'desc'	=> '',
+		'type'	=> 'radio', 
+		'options'	=> array( 
+			'day'   => _x( 'On the same day of the month', 'monthly recurrence type', 'jsccx' ),
+			'week'  => _x( 'On a specific week of the month', 'monthly recurrence type','jsccx' ),
+		),
+		'default'	=> 'day', 
+		'no_empty'	=> true, 
+		'allow_html'	=> false, 
+		'visibility' 		=> array( 
+			'_ctc_event_recurrence' => 'monthly',
+		)
+	);
+	$meta_box['fields'] = ctc_array_merge_after_key(
+		$meta_box['fields'], 
+		array( '_ctc_event_recurrence_monthly_type' => $recurrence_monthly_type ),
+		'_ctc_event_recurrence_period'	
+	);
+	
+	// Add recurrence monthly week
+	$recurrence_monthly_week = array(
+		'name'	=> __( 'Monthly Recurrence Week', 'jsccx' ),
+		'desc'	=> _x( 'Day of the week is the same as Start Date', 'event meta box', 'jsccx' ),
+		'type'	=> 'select', 
+		'options'	=> array( 
+			'1' 		=> 'First Week',
+			'2' 		=> 'Second Week',
+			'3'		 	=> 'Third Week',
+			'4' 		=> 'Fourth Week',
+			'last' 	=> 'Last Week',
+		) ,
+		'default'	=> '', 
+		'no_empty'	=> true, 
+		'custom_field'	=> '', 
+		'visibility' 		=> array( 
+			'_ctc_event_recurrence_monthly_type' => 'week',
+		)
+	);
+	$meta_box['fields'] = ctc_array_merge_after_key(
+		$meta_box['fields'], 
+		array( '_ctc_event_recurrence_monthly_week' => $recurrence_monthly_week ),
+		'_ctc_event_recurrence_monthly_type'	
+	);
+	
+	return $meta_box;
+}
+add_filter( 'ctmb_meta_box-ctc_event_date',  'ccx_metabox_filter_event_date' );
