@@ -24,17 +24,28 @@
  * @since 0.5
  */
 function ccx_shortcode_metabox(){
-	add_meta_box(
-		'ccx_sermon_shortcode',
-		__( 'Sermon Shortcodes', 'jsccx' ),
-		'ccx_shortcode_metabox_render',
-		'ctc_sermon',
-		'normal',
-		'high',
-		array(
-			'__block_editor_compatible_meta_box' => true,
-		) 
+	
+	$post_types = array( 
+		'ctc_sermon', 
+		'ctc_event', 
+	//	'ctc_location', 
+		'ctc_person' 
 	);
+	
+	foreach( $post_types as $post_type ) {
+		add_meta_box(
+			$post_type . '_shortcode',
+			__( 'Available Shortcodes', 'jsccx' ),
+			'ccx_shortcode_metabox_render',
+			$post_type,
+			'normal',
+			'high',
+			array(
+				'__block_editor_compatible_meta_box' => true,
+			) 
+		);
+		
+	}
 }
 add_action( 'admin_init', 'ccx_shortcode_metabox' );
 
@@ -44,8 +55,20 @@ add_action( 'admin_init', 'ccx_shortcode_metabox' );
  * @since 0.5
  */
 function ccx_shortcode_metabox_render( $args ){
-	error_log(json_encode($args));
-	echo sprintf('[ccx_sermon_details id="%s" hide_title]', $args->ID );
+	
+	switch( $args->post_type ){
+		case 'ctc_sermon':
+			echo sprintf('[ccx_sermon_details id="%s" show_title]', $args->ID );
+			break;
+		case 'ctc_event':
+			echo sprintf('[ccx_event_details id="%s" show_title]', $args->ID );
+			break;
+		case 'ctc_person':
+			echo sprintf('[ccx_person_details id="%s" show_title]', $args->ID );
+			break;
+		case 'ctc_location':
+			break;
+	}
 	
 }
 
@@ -69,6 +92,15 @@ function ccx_shortcode_classes(){
 		'audio-link' 			=> 'ccx-sermon-audio-link',
 		'audio'      			=> 'ccx-sermon-audio',
 		'video'      			=> 'ccx-sermon-video',
+		'event_date'      => 'ccx-event-date',
+		'event_time'      => 'ccx-event-time',
+		'event_venue'     => 'ccx-event-venue',
+		'event_category'	=> 'ccx-event-category',
+		'person_position'	=> 'ccx-person-position',
+		'person_email'		=> 'ccx-person-email',
+		'person_phone'		=> 'ccx-person-phone',
+		'person_url'			=> 'ccx-person-url',
+		'person_group'		=> 'ccx-person-group',
 	);
 	
 	$classes = apply_filters( 'ccx_classes', $classes );
@@ -95,9 +127,9 @@ function ccx_sermon_detail_shortcode( $attr ){
 		$id = $m_post[0]->ID;
 	}
 	
-	$hide_title = false;
+	$show_title = false;
 	if( isset( $attr['0'] ) ){
-		$hide_title = ( 'hide_title' == $attr[ '0' ] );
+		$show_title = ( 'show_title' == $attr[ '0' ] );
 	}
 	
 	$data = ccx_get_CTC_data( 'ctc_sermon', $id );
@@ -113,7 +145,7 @@ function ccx_sermon_detail_shortcode( $attr ){
 		</div>
 		',
 		$classes[ 'container' ],
-		$hide_title ? '' : $name,
+		$show_title ? $name : '',
 		ccx_get_sermon_details( $data )
 	);
 	echo $output;
@@ -156,24 +188,242 @@ function ccx_get_sermon_details( $data ){
 
 	// Get output
 	$output = sprintf(' 
-	<div class="%s">
-		%s
-		%s
-		%s
-		%s
-	</div>',
-	$classes[ 'details' ],
-	//$name_src,
-	$date_src,
-	$speaker_src,
-	$series_src,
-	$topic_src,
+		<div class="%s">
+			%s
+			%s
+			%s
+			%s
+		</div>',
+		$classes[ 'details' ],
+		$date_src,
+		$speaker_src,
+		$series_src,
+		$topic_src,
 	);
-	$output = apply_filters( 'ccx_sermon_details', $output );
+	$output = apply_filters( 'ccx_sermon_details', $output, $data );
 	
 	return $output;
 }
 
+/**
+ * Event details shortcode handler
+ *
+ * @since 0.51
+ * @return string Event details output
+ */
+function ccx_event_detail_shortcode( $attr ){
+	
+	extract( shortcode_atts( array(
+		'id' 	=>  null,
+		), $attr ) );
+	
+	// If no ID given, get the latest post
+	if( ! $id ) {
+		$m_post = get_posts("post_type=ctc_event&numberposts=1");
+		$id = $m_post[0]->ID;
+	}
+	
+	$show_title = false;
+	if( isset( $attr['0'] ) ){
+		$show_title = ( 'show_title' == $attr[ '0' ] );
+	}
+	
+	$data = ccx_get_CTC_data( 'ctc_event', $id );
+	$classes = ccx_shortcode_classes();
+	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
+	
+	ob_start();
+	
+	$output = sprintf(
+		'<div class="%s">
+			%s
+			%s
+		</div>
+		',
+		$classes[ 'container' ],
+		$show_title ? $name: '',
+		ccx_get_event_details( $data )
+	);
+	echo $output;
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_event_details', 'ccx_event_detail_shortcode' );
+
+/**
+ * Get Event details output
+ *
+ * @since 0.51
+ * @return string Filtered CPT definition arguments
+ */
+function ccx_get_event_details( $data ){
+	
+	// Use the name as a failsafe
+	if( !isset( $data[ 'name' ] ) ) return;
+	
+	// Prep some stuff
+	$classes = ccx_shortcode_classes();
+	$name_mask = '<h2 class="%s">%s</h2>';
+	$detail_mask = '<div class="%s"><b>%s:</b> %s</div>';
+	$link_mask = '<a href="%s">%s</a>';
+	
+	// Get date
+	$start = isset( $data[ 'start' ] ) ? $data[ 'start' ] : '';
+	$end = isset( $data[ 'end' ] ) ? $data[ 'end' ] : '';
+	$date_str = $start ? sprintf( '%s%s',  date_i18n( 'l, F j', strtotime( $start ) ), $start != $end ? ' - '. date_i18n( 'l, F j', strtotime( $end ) ) : '' ) : '';
+	$date_src = sprintf( $detail_mask, $classes[ 'event_date' ], __( 'Date', 'jsccx' ), $date_str );
+	
+	// Get time
+	$time = isset( $data[ 'time' ] ) ? $data[ 'time' ] : '';
+	$endtime = isset( $data[ 'endtime' ] ) ? $data[ 'endtime' ] : '';	
+	$time_str = $time ? sprintf( '%s%s',  $time, $endtime ? ' - '. $endtime : '' ) : '';
+	$time_src = $time_str ? sprintf( $detail_mask, $classes[ 'event_time' ], __( 'Time', 'jsccx' ), $time_str ) : '';
+	
+	// Get recurrence
+	$recurrence = isset( $data[ 'recurrence_note' ] ) ? $data[ 'recurrence_note' ] : '';
+	
+	// Get venue
+	$venue = isset( $data[ 'venue' ] ) ? $data[ 'venue' ] : '';
+	$address = isset( $data[ 'address' ] ) ? $data[ 'address' ] : '';
+	$location_str = $venue ? $venue : $address;
+	$location_src = $location_str ? sprintf( $detail_mask, $classes[ 'event_venue' ] , __( 'Location', 'jsccx' ), $location_str ) : '';
+	
+	// Get category
+	$category_src = isset( $data[ 'categories' ] ) ? sprintf( $detail_mask, $classes[ 'event_category' ], __( 'Category', 'jsccx' ), $data[ 'categories' ] ) : '';
+	
+	// Get output
+	$output = sprintf(' 
+		<div class="%s">
+			%s
+			%s
+			%s
+			%s
+			%s
+		</div>',
+		$classes[ 'details' ],
+		$date_src,
+		$recurrence,
+		$time_src,
+		$location_src,
+		$category_src,
+	);
+	$output = apply_filters( 'ccx_event_details', $output, $data );
+	
+	return $output;
+}
+
+
+function ccx_get_location_details( $data ){
+	
+}
+
+function ccx_location_detail_shortcode( $attr ){
+	
+}
+
+/**
+ * Get person details output
+ *
+ * @since 0.52
+ * @return string Filtered CPT definition arguments
+ */
+function ccx_get_person_details( $data ){
+	
+	// Use the name as a failsafe
+	if( !isset( $data[ 'name' ] ) ) return;
+	
+	// Prep some stuff
+	$classes = ccx_shortcode_classes();
+	$name_mask = '<h2 class="%s">%s</h2>';
+	$detail_mask = '<div class="%s"><b>%s:</b> %s</div>';
+	$list_mask = '<ul class="%s">%s</ul>'; 
+	$list_item_mask = '<li><a href="%s">%s</a></li>'; 
+	$link_mask = '<a href="%s">%s</a>';
+	
+	// Get position
+	$position_src = isset( $data[ 'position' ] ) ? sprintf( $detail_mask, $classes[ 'person_position' ], __( 'Position', 'jsccx' ), $data[ 'position' ] ) : '';
+	
+	// Get phone
+	$phone_src = $data[ 'phone' ] ? sprintf( $detail_mask, $classes[ 'person_phone' ], __( 'Phone', 'jsccx' ), $data[ 'phone' ] ) : '';
+
+	// Get email
+	$email_src = $data[ 'email' ] ? sprintf( $detail_mask, $classes[ 'person_email' ], __( 'Email', 'jsccx' ), $data[ 'email' ] ) : '';
+	
+	// Get URLs, adding email to the list
+	$url_src = '';
+	$urls = $data[ 'url' ] ? explode( "\r\n", $data[ 'url' ] ): array() ;
+	foreach( $urls as $url ){
+		$url_src .= sprintf( $list_item_mask, $url, $url );
+	}
+	$url_src = $url_src ? sprintf( $list_mask, $classes[ 'person_url' ], $url_src ) : '';
+	
+	// Get group
+	$group = $data[ 'groups' ] ? $data[ 'groups' ] : '';
+	$group_link = $group && isset( $data[ 'groups_link' ] ) ? sprintf( $link_mask, $data[ 'groups_link' ], $group ) : $group;
+	$group_src = $group ? sprintf( $detail_mask, $classes[ 'group_link' ], __( 'Group', 'jsccx' ), $group_link ) : '';
+	
+	// Get output
+	$output = sprintf(' 
+		<div class="%s">
+			%s
+			%s
+			%s
+			%s
+		</div>',
+		$classes[ 'details' ],
+		$position_src,
+		$phone_src,
+		$email_src,
+		$url_src,
+	);
+	$output = apply_filters( 'ccx_person_details', $output, $data );
+	
+	return $output;
+	
+}
+
+/**
+ * Person details shortcode handler
+ *
+ * @since 0.52
+ * @return string Person details output
+ */
+function ccx_person_detail_shortcode( $attr ){
+	
+	extract( shortcode_atts( array(
+		'id' 	=>  null,
+		), $attr ) );
+	
+	// If no ID given, get the latest post
+	if( ! $id ) {
+		$m_post = get_posts("post_type=ctc_person&numberposts=1");
+		$id = $m_post[0]->ID;
+	}
+	
+	$show_title = false;
+	if( isset( $attr['0'] ) ){
+		$show_title = ( 'show_title' == $attr[ '0' ] );
+	}
+	
+	$data = ccx_get_CTC_data( 'ctc_person', $id );
+	$classes = ccx_shortcode_classes();
+	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
+	
+	ob_start();
+	
+	$output = sprintf(
+		'<div class="%s">
+			%s
+			%s
+		</div>
+		',
+		$classes[ 'container' ],
+		$show_title ? $name: '',
+		ccx_get_person_details( $data )
+	);
+	echo $output;
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_person_details', 'ccx_person_detail_shortcode' );
 
 /*
 function ccx_sermon_shortcode( $attr ){

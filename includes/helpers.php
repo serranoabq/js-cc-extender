@@ -237,6 +237,7 @@ function ccx_get_person_data( $post_id ){
 		'img_id'    => $img_id,
 		'position'  => $position,
 		'email'     => $email,
+		'phone'     => $phone,
 		'url'       => $url,
 		'gender'    => $gender,
 		'groups'    => $per_groups,
