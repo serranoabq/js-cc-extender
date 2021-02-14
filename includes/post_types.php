@@ -75,6 +75,7 @@ add_filter( 'ctc_post_type_location_args', 'ccx_change_slug' );
 add_filter( 'ctc_post_type_event_args', 'ccx_change_slug' );
 add_filter( 'ctc_post_type_person_args', 'ccx_change_slug' );
 
+
 /**
  * Add new recurrence settings to event post types
  *
@@ -155,6 +156,7 @@ function ccx_metabox_filter_event_date( $meta_box ) {
 		'custom_field'	=> '', 
 		'visibility' 		=> array( 
 			'_ctc_event_recurrence_monthly_type' => 'week',
+			'_ctc_event_recurrence' => 'monthly',
 		)
 	);
 	$meta_box['fields'] = ctc_array_merge_after_key(
@@ -166,3 +168,34 @@ function ccx_metabox_filter_event_date( $meta_box ) {
 	return $meta_box;
 }
 add_filter( 'ctmb_meta_box-ctc_event_date',  'ccx_metabox_filter_event_date' );
+		
+/**
+ * Add a pastor field for the Location post
+ *
+ * @since 0.52
+ */
+function ccx_metabox_filter_location_pastor( $meta_box ){
+	
+	$location_pastor = array(
+		'name'	=> __( 'Location Pastor', 'jsccx' ),
+		'after_name'	=> '',
+		'after_input'	=> '',
+		'desc'	=> '',
+		'type'	=> 'text', 
+		'options'	=> array(),
+		'class' => 'ctmb-medium',
+		'default'	=> '', 
+		'no_empty'	=> false, 
+		'allow_html'	=> false, 
+		'visibility' 		=> array()
+	);
+
+	$meta_box['fields'] = ctc_array_merge_after_key(
+		$meta_box['fields'], 
+		array( '_ctc_location_pastor' => $location_pastor ),
+		'_ctc_location_show_directions_link'	
+	);
+	
+	return $meta_box;
+}
+add_filter( 'ctmb_meta_box-ctc_location',  'ccx_metabox_filter_location_pastor' );

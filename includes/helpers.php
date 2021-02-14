@@ -114,7 +114,6 @@ function ccx_get_event_data( $post_id ){
 	$permalink = get_permalink( $post_id );
 	$img_id = get_post_thumbnail_id( $post_id ); 
 	
-	
 	// Event data
 	$start = get_post_meta( $post_id, '_ctc_event_start_date' , true ); 
 	$end = get_post_meta( $post_id, '_ctc_event_end_date' , true ); 
@@ -172,7 +171,9 @@ function ccx_get_location_data( $post_id ){
 	
 	// Location data
 	$address = get_post_meta( $post_id, '_ctc_location_address' , true ); 
+	$show_directions = get_post_meta( $post_id, '_ctc_location_show_directions_link' , true ); 
 	$phone = get_post_meta( $post_id, '_ctc_location_phone' , true ); 
+	$email = get_post_meta( $post_id, '_ctc_location_email' , true ); 
 	$times = get_post_meta( $post_id, '_ctc_location_times' , true ); 
 	$pastor = get_post_meta( $post_id, '_ctc_location_pastor' , true );  
 	
@@ -181,14 +182,11 @@ function ccx_get_location_data( $post_id ){
 		'name'        => get_the_title( $post_id ),
 		'permalink'   => $permalink,
 		'img_id'      => $img_id,
-		'slider'      => $slider,
 		'address'     => $address,
 		'phone'       => $phone,
+		'email'       => $email,
 		'times'       => $times,
 		'pastor'      => $pastor,
-		'map_url'		  => $map_url,
-		'map_img_url'	=> $map_img_url,
-		'map_used'    => $map_used,
 		'order'			  => get_post_field( 'menu_order', $post_id),
 	);
 	
@@ -205,8 +203,7 @@ function ccx_get_person_data( $post_id ){
 	if( empty( $post_id ) ) return;
 	
 	$permalink = get_permalink( $post_id );
-	$img = get_post_meta( $post_id, '_ctc_image' , true ); 
-	$img_id = get_post_meta( $post_id, '_ctc_image_id' , true ); 
+	$img_id = get_post_thumbnail_id( $post_id ); 
 	
 	// Person data
 	$position = get_post_meta( $post_id, '_ctc_person_position' , true ); 
@@ -233,11 +230,10 @@ function ccx_get_person_data( $post_id ){
 		'post_id'     => $post_id,
 		'name'      => get_the_title( $post_id ),
 		'permalink' => $permalink,
-		'img'       => $img,
 		'img_id'    => $img_id,
 		'position'  => $position,
 		'email'     => $email,
-		'phone'     => $phone,
+		'phone'    	=> $phone,
 		'url'       => $url,
 		'gender'    => $gender,
 		'groups'    => $per_groups,

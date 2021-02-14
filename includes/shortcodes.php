@@ -8,15 +8,10 @@
  * @license    	http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  * @since      	0.5
  */
- 
 
-/**
- What do we want the shortcodes to be?
- [ccx_sermon] =  Full sermon details
- [ccx_sermon_details] = Sermon details (title, speakers, book, topic, series, etc.)
- [ccx_sermon_media] = Semon media (image, video audio)
- [ccx_event] = Full event details
-**/
+define( 'CCX_SHORTCODE_DETAILS', 1 );
+define( 'CCX_SHORTCODE_MEDIA', 2 );
+define( 'CCX_SHORTCODE_FULL', CCX_SHORTCODE_DETAILS + CCX_SHORTCODE_MEDIA );
 
 /**
  * Add a metabox with the shortcodes available for the post
@@ -28,7 +23,7 @@ function ccx_shortcode_metabox(){
 	$post_types = array( 
 		'ctc_sermon', 
 		'ctc_event', 
-	//	'ctc_location', 
+		'ctc_location', 
 		'ctc_person' 
 	);
 	
@@ -56,20 +51,13 @@ add_action( 'admin_init', 'ccx_shortcode_metabox' );
  */
 function ccx_shortcode_metabox_render( $args ){
 	
-	switch( $args->post_type ){
-		case 'ctc_sermon':
-			echo sprintf('[ccx_sermon_details id="%s" show_title]', $args->ID );
-			break;
-		case 'ctc_event':
-			echo sprintf('[ccx_event_details id="%s" show_title]', $args->ID );
-			break;
-		case 'ctc_person':
-			echo sprintf('[ccx_person_details id="%s" show_title]', $args->ID );
-			break;
-		case 'ctc_location':
-			break;
-	}
+	$post_type = str_replace( 'ctc_', 'ccx_', $args->post_type );
 	
+	echo "<pre>";
+	echo sprintf('[%s id="%s" size="full|large|medium|thumbnail" %s show_title] </br>', $post_type, $args->ID, "type=image|audio|video" );
+	echo sprintf('[%s_details id="%s" show_title]</br>', $post_type, $args->ID );
+	echo sprintf('[%s_media id="%s" size="full|large|medium|thumbnail" show_title]', $post_type, $args->ID );
+	echo "</pre>";
 }
 
 /**
@@ -84,6 +72,7 @@ function ccx_shortcode_classes(){
 		'img'        			=> 'ccx-img',
 		'container'  			=> 'ccx-container',
 		'media'      			=> 'ccx-media',
+		'media_link'      => 'ccx-media-link',
 		'details'    			=> 'ccx-details',
 		'sermon_date'     => 'ccx-sermon-date',
 		'sermon_speaker'  => 'ccx-sermon-speaker',
@@ -101,6 +90,11 @@ function ccx_shortcode_classes(){
 		'person_phone'		=> 'ccx-person-phone',
 		'person_url'			=> 'ccx-person-url',
 		'person_group'		=> 'ccx-person-group',
+		'location_address'=> 'ccx-location-address',
+		'location_phone'	=> 'ccx-location-phone',
+		'location_email'	=> 'ccx-location-email',
+		'location_times'	=> 'ccx-location-times',
+		'location_pastor'	=> 'ccx-location-pastor',
 	);
 	
 	$classes = apply_filters( 'ccx_classes', $classes );
@@ -108,6 +102,98 @@ function ccx_shortcode_classes(){
 	return $classes;
 }
 
+/*** Shortcode Handlers ***/
+/**
+ * Global handler for shortcodes
+ *
+ * @since 0.53
+ * @params $attr 						Shortcode attributes
+ * @params $post_type				Post type
+ * @params $shortcode_type  Shortcode type (CCX_SHORTCODE_DETAILS, CCX_SHORTCODE_MEDIA or CCX_SHORTCODE_FULL)
+ */
+function ccx_shortcode_handler( $attr, $post_type, $shortcode_type ){
+	
+	// Valid post_types
+	$post_types = array( 
+		'ctc_sermon', 
+		'ctc_event', 
+		'ctc_location', 
+		'ctc_person' 
+	);
+	
+	if( ! in_array( $post_type, $post_types ) ) return;
+	
+	extract( shortcode_atts( array(
+		'id' 	=>  null, 	// ID of post to show 
+		'size' => 'full',	// Named size of image. Can be WP default full|large|medium|thumbnail or a different size defined by the theme
+		'type' => null,		// Force a specific type of media (image|audio|video; sermon only)
+		), $attr ) );
+	
+	if( is_string( $attr ) && empty( $attr ) )
+		$attr = array();
+	
+	if( ! $id ) {
+		// If no ID given...
+		if( $post_type == get_post_type() ){
+			// ...and the current post is of the right type, use its ID
+			$id = get_the_ID();
+		} else {
+			// ...or get the latest post of the right post type
+			$m_post = get_posts("post_type=" . $post_type . "&numberposts=1");
+			$id = $m_post[0]->ID;
+		}
+	}
+	
+	$show_title = in_array( 'show_title', $attr );
+	
+	$data = ccx_get_CTC_data( $post_type, $id );
+	$classes = ccx_shortcode_classes();
+	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
+	
+	$media = ccx_get_media_output( $data, $post_type, $size, $type );
+	switch( $post_type ){
+		case( 'ctc_sermon' ):
+			$details = ccx_get_sermon_details( $data );
+			break;
+		case( 'ctc_event' ):
+			$details = ccx_get_event_details( $data );
+			break;
+		case( 'ctc_location' ):
+			$details = ccx_get_location_details( $data );
+			break;
+		case( 'ctc_person' ):
+			$details = ccx_get_person_details( $data );
+			break;
+	}
+	
+	$output = sprintf(
+		'<div class="%s">
+			%s
+			%s
+			%s
+		</div>
+		',
+		$classes[ 'container' ],
+		( $shortcode_type == CCX_SHORTCODE_MEDIA || $shortcode_type == CCX_SHORTCODE_FULL ) ? $media : '',
+		$show_title ? $name : '',
+		( $shortcode_type == CCX_SHORTCODE_DETAILS || $shortcode_type == CCX_SHORTCODE_FULL ) ? $details : ''
+	);
+	
+	return $output;
+}
+
+/**
+ * Sermon shortcode handler
+ *
+ * @since 0.53
+ * @return string Sermon output
+*/
+function ccx_sermon_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_sermon', CCX_SHORTCODE_FULL);
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_sermon', 'ccx_sermon_shortcode' );
 
 /**
  * Sermon details shortcode handler
@@ -116,43 +202,142 @@ function ccx_shortcode_classes(){
  * @return string Sermon details output
  */
 function ccx_sermon_detail_shortcode( $attr ){
-	
-	extract( shortcode_atts( array(
-		'id' 	=>  null,
-		), $attr ) );
-	
-	// If no ID given, get the latest post
-	if( ! $id ) {
-		$m_post = get_posts("post_type=ctc_sermon&numberposts=1");
-		$id = $m_post[0]->ID;
-	}
-	
-	$show_title = false;
-	if( isset( $attr['0'] ) ){
-		$show_title = ( 'show_title' == $attr[ '0' ] );
-	}
-	
-	$data = ccx_get_CTC_data( 'ctc_sermon', $id );
-	$classes = ccx_shortcode_classes();
-	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
-	
 	ob_start();
-	
-	$output = sprintf(
-		'<div class="%s">
-			%s
-			%s
-		</div>
-		',
-		$classes[ 'container' ],
-		$show_title ? $name : '',
-		ccx_get_sermon_details( $data )
-	);
-	echo $output;
+	echo ccx_shortcode_handler( $attr, 'ctc_sermon', CCX_SHORTCODE_DETAILS );
 	return ob_get_clean();
 }
 add_shortcode( 'ccx_sermon_details', 'ccx_sermon_detail_shortcode' );
 
+/**
+ * Sermon media shortcode handler
+ *
+ * @since 0.53
+ * @return string Sermon media output
+*/
+function ccx_sermon_media_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_sermon', CCX_SHORTCODE_MEDIA );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_sermon_media', 'ccx_sermon_media_shortcode' );
+
+/**
+ * Event shortcode handler
+ *
+ * @since 0.53
+ * @return string Event output
+*/
+function ccx_event_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_event', CCX_SHORTCODE_FULL);
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_event', 'ccx_event_shortcode' );
+
+/**
+ * Event details shortcode handler
+ *
+ * @since 0.51
+ * @return string Event details output
+ */
+function ccx_event_detail_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_event', CCX_SHORTCODE_DETAILS );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_event_details', 'ccx_event_detail_shortcode' );
+
+/**
+ * Event media shortcode handler
+ *
+ * @since 0.53
+ * @return string Event media output
+*/
+function ccx_event_media_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_event', CCX_SHORTCODE_MEDIA );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_event_media', 'ccx_event_media_shortcode' );
+
+/**
+ * Location shortcode handler
+ *
+ * @since 0.53
+ * @return string Location output
+*/
+function ccx_location_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_location', CCX_SHORTCODE_FULL);
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_location', 'ccx_location_shortcode' );
+
+/**
+ * Location details shortcode
+ *
+ * @since 0.53
+ */
+function ccx_location_detail_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_location', CCX_SHORTCODE_DETAILS );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_location_details', 'ccx_location_detail_shortcode' );
+
+/**
+ * Location media shortcode handler
+ *
+ * @since 0.53
+ * @return string Location media output
+*/
+function ccx_location_media_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_location', CCX_SHORTCODE_MEDIA );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_location_media', 'ccx_location_media_shortcode' );
+
+/**
+ * Person shortcode handler
+ *
+ * @since 0.53
+ * @return string Person output
+*/
+function ccx_person_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_person', CCX_SHORTCODE_FULL);
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_person', 'ccx_person_shortcode' );
+
+/**
+ * Person details shortcode handler
+ *
+ * @since 0.52
+ * @return string Person details output
+ */
+function ccx_person_detail_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_person', CCX_SHORTCODE_DETAILS );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_person_details', 'ccx_person_detail_shortcode' );
+
+/**
+ * Person media shortcode handler
+ *
+ * @since 0.53
+ * @return string Person details output
+*/
+function ccx_person_media_shortcode( $attr ){
+	ob_start();
+	echo ccx_shortcode_handler( $attr, 'ctc_person', CCX_SHORTCODE_MEDIA );
+	return ob_get_clean();
+}
+add_shortcode( 'ccx_person_media', 'ccx_person_media_shortcode' );
+
+/*** Detail outputs ***/
 /**
  * Get Sermon details output
  *
@@ -206,54 +391,10 @@ function ccx_get_sermon_details( $data ){
 }
 
 /**
- * Event details shortcode handler
- *
- * @since 0.51
- * @return string Event details output
- */
-function ccx_event_detail_shortcode( $attr ){
-	
-	extract( shortcode_atts( array(
-		'id' 	=>  null,
-		), $attr ) );
-	
-	// If no ID given, get the latest post
-	if( ! $id ) {
-		$m_post = get_posts("post_type=ctc_event&numberposts=1");
-		$id = $m_post[0]->ID;
-	}
-	
-	$show_title = false;
-	if( isset( $attr['0'] ) ){
-		$show_title = ( 'show_title' == $attr[ '0' ] );
-	}
-	
-	$data = ccx_get_CTC_data( 'ctc_event', $id );
-	$classes = ccx_shortcode_classes();
-	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
-	
-	ob_start();
-	
-	$output = sprintf(
-		'<div class="%s">
-			%s
-			%s
-		</div>
-		',
-		$classes[ 'container' ],
-		$show_title ? $name: '',
-		ccx_get_event_details( $data )
-	);
-	echo $output;
-	return ob_get_clean();
-}
-add_shortcode( 'ccx_event_details', 'ccx_event_detail_shortcode' );
-
-/**
  * Get Event details output
  *
  * @since 0.51
- * @return string Filtered CPT definition arguments
+ * @return string Filtered event details
  */
 function ccx_get_event_details( $data ){
 	
@@ -266,7 +407,7 @@ function ccx_get_event_details( $data ){
 	$detail_mask = '<div class="%s"><b>%s:</b> %s</div>';
 	$link_mask = '<a href="%s">%s</a>';
 	
-	// Get date
+	// Get times
 	$start = isset( $data[ 'start' ] ) ? $data[ 'start' ] : '';
 	$end = isset( $data[ 'end' ] ) ? $data[ 'end' ] : '';
 	$date_str = $start ? sprintf( '%s%s',  date_i18n( 'l, F j', strtotime( $start ) ), $start != $end ? ' - '. date_i18n( 'l, F j', strtotime( $end ) ) : '' ) : '';
@@ -311,13 +452,58 @@ function ccx_get_event_details( $data ){
 	return $output;
 }
 
-
+/**
+ * Get Location details output
+ *
+ * @since 0.53
+ * @return string Filtered location details
+ * @params array $data Location post data
+ */
 function ccx_get_location_details( $data ){
 	
-}
-
-function ccx_location_detail_shortcode( $attr ){
+	// Use the name as a failsafe
+	if( !isset( $data[ 'name' ] ) ) return;
 	
+	// Prep some stuff
+	$classes = ccx_shortcode_classes();
+	$name_mask = '<h2 class="%s">%s</h2>';
+	$detail_mask = '<div class="%s"><b>%s:</b> %s</div>';
+	$link_mask = '<a href="%s">%s</a>';
+	
+	// Get address
+	$address = !empty( $data[ 'address' ] ) ? sprintf( $detail_mask, $classes[ 'location_address' ], __( 'Address', 'jsccx' ), $data[ 'address' ] ) : '';
+	
+	// Get phone
+	$phone = !empty( $data[ 'phone' ] ) ? sprintf( $detail_mask, $classes[ 'location_phone' ], __( 'Phone', 'jsccx' ), $data[ 'phone' ] ) : '';
+	
+	// Get email
+	$email = !empty( $data[ 'email' ] ) ? sprintf( $detail_mask, $classes[ 'location_email' ], __( 'Email', 'jsccx' ), $data[ 'email' ] ) : '';
+	
+	// Get times
+	$times = !empty( $data[ 'times' ] ) ? sprintf( $detail_mask, $classes[ 'location_times' ], __( 'Times', 'jsccx' ), $data[ 'times' ] ) : '';
+	
+	// Get pastor
+	$pastor = !empty( $data[ 'pastor' ] ) ? sprintf( $detail_mask, $classes[ 'location_pastor' ], __( 'Pastor', 'jsccx' ), $data[ 'pastor' ] ) : '';	
+	
+	// Get output
+	$output = sprintf(' 
+		<div class="%s">
+			%s
+			%s
+			%s
+			%s
+			%s
+		</div>',
+		$classes[ 'details' ],
+		$address,
+		$times,
+		$phone,
+		$email,
+		$pastor,
+	);
+	$output = apply_filters( 'ccx_location_details', $output, $data );
+	
+	return $output;
 }
 
 /**
@@ -382,225 +568,114 @@ function ccx_get_person_details( $data ){
 }
 
 /**
- * Person details shortcode handler
+ * Get media output
  *
- * @since 0.52
- * @return string Person details output
+ * @since 0.53
+ * @return string Media output
  */
-function ccx_person_detail_shortcode( $attr ){
+function ccx_get_media_output( $data, $post_type, $size = 'full', $media_type = '' ){
 	
-	extract( shortcode_atts( array(
-		'id' 	=>  null,
-		), $attr ) );
-	
-	// If no ID given, get the latest post
-	if( ! $id ) {
-		$m_post = get_posts("post_type=ctc_person&numberposts=1");
-		$id = $m_post[0]->ID;
-	}
-	
-	$show_title = false;
-	if( isset( $attr['0'] ) ){
-		$show_title = ( 'show_title' == $attr[ '0' ] );
-	}
-	
-	$data = ccx_get_CTC_data( 'ctc_person', $id );
+	$has_image = !empty( $data[ 'img_id'] );
+	$has_audio = isset( $data[ 'audio' ] ) && !empty( $data[ 'audio' ] );
+	$has_video = isset( $data[ 'video' ] ) && !empty( $data[ 'video' ] );
 	$classes = ccx_shortcode_classes();
-	$name = sprintf( '<h2 class="%s">%s</h2>', $classes[ 'name' ], $data[ 'name' ] );
 	
-	ob_start();
+	$img_src = '';
+	$img = '';
+	$w = 1280; 
+	if( $has_image ) {
+		$img_src = wp_get_attachment_image( $data[ 'img_id' ], $size, '', ['class' => $classes[ 'img' ] ] );
+		$img = wp_get_attachment_image_src( $data[ 'img_id' ], $size );
+		$img = $img[0];
+		
+		// Need to figure out the width
+		$raw_w = wp_get_attachment_metadata( $data[ 'img_id' ] );
+		$raw_w = $raw_w[ 'width' ];			
+		if( $size != 'full' ){
+			// Figure out if the size is a defined size
+			$image_sizes = ccx_get_all_image_sizes();
+			if( isset( $image_sizes[ $size ] ) ){
+				$w = min( $raw_w, $image_sizes[ $size ][ 'width' ] );
+			}
+		}
+	}
 	
-	$output = sprintf(
-		'<div class="%s">
-			%s
+	$audio_src = '';
+	if( $has_audio ){
+		$audio_args = array( 
+			'src' 	=> $data[ 'audio' ], 
+			'class'	=> $classes[ 'audio' ] . ' wp-audio-shortcode'
+		);
+		if( $has_image ){
+			$audio_args[ 'style' ] = "width:100%; max-width:{$w}px";
+		}
+		$audio_src = wp_audio_shortcode( $audio_args );
+		$audio_src .= "\n<style>.{$classes['audio']} { max-width:{$w}px !important;}</style>"; 
+	}
+	
+	$video_src = '';
+	if( $has_video ){
+		$video = esc_url( $data[ 'video' ] );
+		$video_args = array(
+			'src'      => $video,
+			'height'   => intval( $w * 9 /16 ),
+			'width'    => $w, 
+			'autoplay' => true,
+			'class'		 => $classes[ 'video' ] . ' wp-video-shortcode'
+		);
+		
+		if( $has_image ){
+			$video_args[ 'poster' ]  = $img;
+		}
+		
+		$video_src = str_replace( "'video'", '"video"', wp_video_shortcode( $video_args ) ); 
+		$video_src = preg_replace( '~\R~u', '', $video_src ); 	
+	}
+	
+	$get_media = isset( $_GET[ 'media' ] ) ? $_GET[ 'media' ] : '';
+	$get_media = empty( $get_media ) ? $media_type : $get_media;
+	
+	$media_output = '';
+	if( $has_video && ( 'video' == $get_media || empty( $get_media ) ) ){
+		// Show video
+		$media_output = $video_src;
+		if( $has_audio ){
+			$media_output .= sprintf( '<p style="text-align: center"><a href="%s" class="%s">AUDIO</a></p>', 
+			esc_url( add_query_arg( 'media', 'audio' ) ),
+			$classes[ 'media_link' ] );
+		}
+	}elseif( $has_audio && ( 'audio' == $get_media || empty( $get_media ) ) ){
+		// Show audio
+		if( $has_image && empty( $media_type ) ){
+			$media_output = $img_src;
+		}
+		$media_output .= $audio_src;
+		if( $has_video ){
+			$media_output .= sprintf( '<p style="text-align: center"><a href="%s" class="%s">VIDEO</a></p>', 
+			esc_url( add_query_arg( 'media', 'video' ) ),
+			$classes['media_link' ] );
+		}
+	}elseif( $has_image && ( 'image' == $get_media || empty( $get_media ) )){
+		$media_output = $img_src;
+	}
+	
+	$media_output = sprintf('
+		<div class = "%s">
 			%s
 		</div>
-		',
-		$classes[ 'container' ],
-		$show_title ? $name: '',
-		ccx_get_person_details( $data )
+	',
+	$classes[ 'media' ],
+	$media_output
 	);
-	echo $output;
-	return ob_get_clean();
-}
-add_shortcode( 'ccx_person_details', 'ccx_person_detail_shortcode' );
 
-/*
-function ccx_sermon_shortcode( $attr ){
-	extract( shortcode_atts( array(
-		'id' 	=>  ''
-		), $attr ) );
-	
-	$data = ccx_shortcode_query( 'ctc_sermon', $id );
-	
-	// classes
-	$classes = array(
-		'container'  => 'ctcex-sermon-container',
-		'media'      => 'ctcex-sermon-media',
-		'details'    => 'ctcex-sermon-details',
-		'name'       => 'ctcex-sermon-name',
-		'date'       => 'ctcex-sermon-date',
-		'speaker'    => 'ctcex-sermon-speaker',
-		'series'     => 'ctcex-sermon-series',
-		'topic'      => 'ctcex-sermon-topic',
-		'audio-link' => 'ctcex-sermon-audio-link',
-		'audio'      => 'ctcex-sermon-audio',
-		'video'      => 'ctcex-sermon-video',
-		'img'        => 'ctcex-sermon-img'
-	);
-	
-	$output = ''; 
-			
-	$name = isset( $data[ 'name' ] ) ? $data[ 'name' ] : '';
-	$permalink = isset( $data[ 'permalink' ] ) ? $data[ 'permalink' ] : '';
-	
-	// Get date
-	$date_src = sprintf( '<div class="%s"><b> %s:</b> %s</div>', $classes[ 'date' ], __( 'Date', 'ctcex' ), get_the_date() );
-	
-	// Get speaker
-	$speaker_src = isset( $data[ 'speakers' ] ) ? sprintf( '<div class="%s"><b>%s:</b> %s</div>', $classes[ 'speaker' ], __( 'Speaker', 'ctcex' ), $data[ 'speakers' ] ) : '';
-	
-	// Get series
-	$series = isset( $data[ 'series' ] ) ? $data[ 'series' ] : '';
-	$series_link = $series && isset( $data[ 'series_link' ] ) ? sprintf( '<a href="%s">%s</a>', $data[ 'series_link' ], $series ) : $series;
-	$series_src = $series ?	sprintf( '<div class="%s"><b>%s:</b> %s</div>', $classes[ 'series' ],  __( 'Series', 'ctcex' ), $series_link ) : '';
-	
-	// Get topics
-	// Topic name
-	$topic_name = explode( '/', ctcex_get_option( 'ctc-sermon-topic' , __( 'Topic', 'ctcex') ) );
-	$topic_name = ucfirst( array_pop(  $topic_name ) );
-	$topic = isset( $data[ 'topic' ] ) ? $data[ 'topic' ] : '';
-	$topic_link = $topic && isset( $data[ 'topic_link' ] ) ? sprintf( '<a href="%s">%s</a>', $data[ 'topic_link' ], $topic ) : $topic;
-	$topic_src = $topic ? sprintf( '<div class="%s"><b>%s:</b> %s</div>', $classes[ 'topic' ], $topic_name, $topic_link ) : '';
-
-	// Get audio link
-	$audio = isset( $data[ 'audio' ] ) ? $data[ 'audio' ] : '';
-	$audio_link_src = $audio ? sprintf( '<div class="%s"><b>%s:</b> <a href="%s">%s</a></div>', $classes[ 'audio-link' ], __( 'Audio', 'ctcex' ), $audio, __( 'Download audio', 'ctcex' ) ) : '';
-	
-	// Get audio display
-	$audio_src = $audio ? sprintf( '<div class="%s">%s</div>', $classes[ 'audio' ], wp_audio_shortcode( array( 'src' => $audio ) ) ) : '';
-	
-	// Get video display
-	$video = isset( $data[ 'video' ] ) ? $data[ 'video' ] : '';
-	$video_iframe_class = strripos( $video, 'iframe' ) ? 'iframe-container' : '';
-	$video_src = $video ? sprintf( '<div class="%s %s">%s</div>', $classes[ 'video' ], $video_iframe_class, $video_iframe_class ? $video : wp_video_shortcode( array( 'src' => $video ) ) ) : '';
-
-	// Use the image as a placeholder for the video
-	$img = isset( $data[ 'img' ] ) ? $data[ 'img' ] : '';
-	$img_overlay_class = $video && $img ? 'ctcex-overlay' : '';
-	$img_overlay_js = $img_overlay_class ? sprintf(
-		'<div class="ctcex-overlay">
-			<i class="' . ( $glyph === 'gi' ? 'genericon genericon-play' : 'fa fa-play' ) . '"></i>
-		</div><script>
-			jQuery(document).ready( function($) {
-				$( ".%s" ).css( "position", "relative" );
-				$( ".ctcex-overlay" ).css( "cursor", "pointer" );
-				var vid_src = \'%s\';
-				vid_src = vid_src.replace( "autoPlay=false", "autoPlay=true" );
-				$( ".ctcex-overlay" ).click( function(){
-					$( this ).hide();
-					$( ".ctcex-sermon-img" ).fadeOut( 200, function() {
-						$( this ).replaceWith( vid_src );
-						$( ".%s").addClass( "video_loaded" );
-					});
-				} );
-			})
-		</script>', 
-		$classes[ 'media' ],
-		$video_src, 
-		$classes[ 'media' ]
-		) : '' ;
-		
-	// Get image
-	$img_src = $img ? sprintf( '%s<img class="%s" src="%s" alt="%s" width="960"/>', $img_overlay_js, $classes[ 'img' ], $img, $name ) : '';
-	$video_src = $img_overlay_class ? $img_src : $video_src;
-	
-	$img_video_output = $video_src ? $video_src : $img_src . $audio_src;
-	
-	// Prepare output
-	$output = sprintf(
-		'<div class="%s">
-			<div class="%s">%s</div>
-			<div class="%s">
-				<h3><a href="%s">%s</a></h3>
-				%s
-				%s
-				%s
-				%s
-				%s
-			</div>
-		', 
-		$classes[ 'container' ],
-		$classes[ 'media' ],
-		$img_video_output,
-		$classes[ 'details' ],
-		$permalink,
-		$name,
-		$date_src,
-		$speaker_src,
-		$series_src,
-		$topic_src,
-		$audio_link_src
-	);
-	
-
-
-	return $output;
-	
+	return $media_output;
 }
 
 
-function ccx_sermon_media_shortcode( $attr ){
-	extract( shortcode_atts( array(
-		'id' 	=>  ''
-		), $attr ) );
-	
-	
-}
-*/
-
-
-/*
-function ccx_sermon_media( $data, $classes ){
-	
-	// Image
-	$img = isset( $data[ 'img_id' ] ) ? wp_get_attachment_image_url( $data[ 'img_id' ], 'full' ) : '';
-	
-	$img_src = $img ? sprintf( '%s<img class="%s" src="%s" alt="%s" width="960"/>', $img_overlay_js, $classes[ 'img' ], $img, $data[ 'name' ] ) : '';
-			
-	// Get audio link
-	$audio = isset( $data[ 'audio' ] ) ? $data[ 'audio' ] : '';
-	$audio_link_src = $audio ? sprintf( '<div class="%s"><b>%s:</b> <a href="%s">%s</a></div>', $classes[ 'audio-link' ], __( 'Audio', 'jsccx' ), $audio, __( 'Download audio', 'jsccx' ) ) : '';
-	
-	// Get audio display
-	$audio_src = $audio ? sprintf( '<div class="%s">%s</div>', $classes[ 'audio' ], wp_audio_shortcode( array( 'src' => $audio ) ) ) : '';
-	
-	// Get video display
-	if( isset( $data[ 'video' ] ) ){
-		$video = $data[ 'video' ];
-		$video_attr = array( 'src' => $video );
-		if( $img ) $video_attr[ 'poster' ] = $img_src;
-		$video_class = 
-	}
-	$video = isset( $data[ 'video' ] ) ? $data[ 'video' ] : '';
-	
-	$video_attr = $video ? array( 'src' => $video ) : ;
-	
-	
-	$video_iframe_class = strripos( $video, 'iframe' ) ? 'iframe-container' : '';
-	$video_src = $video ? sprintf( '<div class="%s %s">%s</div>', $classes[ 'video' ], $video_iframe_class, $video_iframe_class ? $video : wp_video_shortcode( array( 'src' => $video ) ) ) : '';
-	
-	$output = '
-	<div class="ccx-sermon-media">' . 
-		
-	'</div>';
-		
-	
-}
-*/
 
 
 
+////////////////////
 function ccx_shortcode_style(){
 	$css = '
 	video {
